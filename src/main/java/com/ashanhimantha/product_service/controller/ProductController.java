@@ -70,7 +70,7 @@ public class ProductController extends AbstractController {
             @AuthenticationPrincipal Jwt jwt) {
 
         productService.deleteProduct(productId);
-        return noContent("Product deleted successfully");
+        return success("Product deleted successfully",null);
     }
 
     // --- DATA STEWARD / ADMIN-FACING ENDPOINTS ---
