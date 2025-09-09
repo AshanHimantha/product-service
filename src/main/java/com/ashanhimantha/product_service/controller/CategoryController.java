@@ -55,7 +55,6 @@ public class CategoryController extends AbstractController {
     }
 
     @DeleteMapping("/{categoryId}") // ADD THIS ENDPOINT
-    @PreAuthorize("hasAuthority('SuperAdmins')")
     public ResponseEntity<ApiResponse<Void>> deleteCategory(@PathVariable Long categoryId) {
         categoryService.deleteCategory(categoryId);
         return success("Category deleted successfully", null);
