@@ -10,5 +10,7 @@ public interface CategoryService {
     Category createCategory(CategoryRequest categoryRequest);
     Category getCategoryById(Long categoryId);
     Page<Category> getAllCategories(Pageable pageable);
-    List<Category> getAllCategoriesAsList(); // (Bonus method for UI dropdowns)
+    List<Category> getAllCategoriesAsList();
+    Category updateCategory(Long categoryId, CategoryRequest categoryRequest); // ADD THIS
+    void deleteCategory(Long categoryId); // ADD THIS
 }
