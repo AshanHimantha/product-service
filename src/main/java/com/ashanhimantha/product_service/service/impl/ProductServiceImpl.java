@@ -123,12 +123,14 @@ public class ProductServiceImpl implements ProductService {
         }
     }
 
+
     @Override
-    public ProductResponse getAnyProductById(Long productId) {
-        // This method finds a product by ID without checking its status.
-        // The security check (@PreAuthorize) on the controller ensures only authorized users can call this.
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + productId));
-        return productMapper.toProductResponse(product);
+    @Transactional(readOnly = true)
+    public Page<AdminProductResponse> getProductsBySupplier(String supplierId, Pageable pageable) {
+        // Find all products for the given supplierId using the new repository method
+        Page<Product> productPage = productRepository.findBySupplierId(supplierId, pageable);
+
+        // Map the results to the detailed AdminProductResponse DTO
+        return productPage.map(productMapper::toAdminProductResponse);
     }
 }

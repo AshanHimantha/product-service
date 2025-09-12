@@ -19,5 +19,5 @@ public interface ProductService {
     ProductResponse getApprovedProductById(Long productId);
     ProductResponse updateProductStatus(Long productId, ProductStatus newStatus);
     Page<ProductResponse> getProductsByStatus(Pageable pageable, String status);
-    ProductResponse getAnyProductById(Long productId);
+    Page<AdminProductResponse> getProductsBySupplier(String supplierId, Pageable pageable);
 }

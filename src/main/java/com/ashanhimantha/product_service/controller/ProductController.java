@@ -53,7 +53,7 @@ public class ProductController extends AbstractController {
     }
 
     @PutMapping("/{productId}")
-    @PreAuthorize("hasRole('SuperAdmins') or @productSecurityService.isOwner(#jwt, #productId)") // CORRECTED: Use hasRole
+    @PreAuthorize("hasRole('SuperAdmins') ") // CORRECTED: Use hasRole
     public ResponseEntity<ApiResponse<ProductResponse>> updateProduct(
             @PathVariable Long productId,
             @Valid @RequestBody ProductRequest productRequest,
@@ -64,7 +64,7 @@ public class ProductController extends AbstractController {
     }
 
     @DeleteMapping("/{productId}")
-    @PreAuthorize("hasRole('SuperAdmins') or @productSecurityService.isOwner(#jwt, #productId)") // CORRECTED: Use hasRole
+    @PreAuthorize("hasRole('SuperAdmins')") // CORRECTED: Use hasRole
     public ResponseEntity<ApiResponse<Void>> deleteProduct(
             @PathVariable Long productId,
             @AuthenticationPrincipal Jwt jwt) {
@@ -93,13 +93,17 @@ public class ProductController extends AbstractController {
         return success("Products pending approval retrieved successfully", responseData);
     }
 
-    @GetMapping("/any/{productId}")
-    @PreAuthorize("hasAnyRole('DataStewards', 'SuperAdmins') or @productSecurityService.isOwner(#jwt, #productId)") // CORRECTED: Use hasAnyRole and hasRole
-    public ResponseEntity<ApiResponse<ProductResponse>> getAnyProductById(
-            @PathVariable Long productId,
+
+    @GetMapping("/supplier-products")
+    @PreAuthorize("hasAnyRole('Suppliers', 'SuperAdmins')")
+    public ResponseEntity<ApiResponse<PaginatedResponse<AdminProductResponse>>> getMyProducts(
+            Pageable pageable,
             @AuthenticationPrincipal Jwt jwt) {
 
-        ProductResponse product = productService.getAnyProductById(productId);
-        return success("Product details retrieved successfully", product);
+        String supplierId = jwt.getSubject();
+        Page<AdminProductResponse> productPage = productService.getProductsBySupplier(supplierId, pageable);
+        PaginatedResponse<AdminProductResponse> responseData = new PaginatedResponse<>(productPage);
+
+        return success("Supplier's products retrieved successfully", responseData);
     }
 }
