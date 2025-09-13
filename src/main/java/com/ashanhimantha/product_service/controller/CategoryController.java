@@ -41,14 +41,14 @@ public class CategoryController extends AbstractController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAuthority('SuperAdmins')")
+    @PreAuthorize("hasRole('SuperAdmins')")
     public ResponseEntity<ApiResponse<Category>> createCategory(@Valid @RequestBody CategoryRequest categoryRequest) {
         Category createdCategory = categoryService.createCategory(categoryRequest);
         return created("Category created successfully", createdCategory);
     }
 
     @PutMapping("/{categoryId}") // ADD THIS ENDPOINT
-    @PreAuthorize("hasAuthority('SuperAdmins')")
+    @PreAuthorize("hasRole('SuperAdmins')")
     public ResponseEntity<ApiResponse<Category>> updateCategory(@PathVariable Long categoryId, @Valid @RequestBody CategoryRequest categoryRequest) {
         Category updatedCategory = categoryService.updateCategory(categoryId, categoryRequest);
         return success("Category updated successfully", updatedCategory);
