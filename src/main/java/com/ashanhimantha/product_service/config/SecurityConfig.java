@@ -2,11 +2,14 @@ package com.ashanhimantha.product_service.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -25,20 +28,38 @@ import java.util.stream.Stream;
 public class SecurityConfig {
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    @Order(1)
+    public SecurityFilterChain publicSecurityFilterChain(HttpSecurity http) throws Exception {
+        // First filter chain for public GET endpoints only - NO JWT validation
         http
-                .csrf(csrf -> csrf.disable())
+                .securityMatcher(request -> {
+                    String path = request.getServletPath();
+                    String method = request.getMethod();
+                    // Only match GET requests to categories and products endpoints
+                    return "GET".equals(method) &&
+                           (path.startsWith("/api/v1/categories") || path.startsWith("/api/v1/products"));
+                })
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
-                        // --- Public Read-Only Access ---
-                        // Rule: Anyone (authenticated or not) can view the list of categories and products.
                         .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/products/**").permitAll()
+                        .anyRequest().denyAll() // This should never be reached due to securityMatcher
+                );
+        // No OAuth2 configuration here - completely bypasses JWT validation
 
+        return http.build();
+    }
 
-                        .anyRequest().authenticated()
-                )
+    @Bean
+    @Order(2)
+    public SecurityFilterChain protectedSecurityFilterChain(HttpSecurity http) throws Exception {
+        // Second filter chain for all other endpoints - WITH JWT validation
+        http
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(authorize -> authorize.anyRequest().authenticated())
                 .oauth2ResourceServer(oauth2 -> oauth2
-                        // Configure the JWT converter to correctly process Cognito roles
                         .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
                 );
 
@@ -58,11 +79,15 @@ public class SecurityConfig {
 
         // Combine the converters. The final list of authorities will contain both standard
         // OAuth scopes and our custom Cognito groups prefixed with ROLE_.
-        Converter<Jwt, Collection<GrantedAuthority>> combinedConverter = jwt ->
-                Stream.concat(
-                        grantedAuthoritiesConverter.convert(jwt).stream(),
-                        groupAuthoritiesConverter.convert(jwt).stream()
-                ).collect(Collectors.toList());
+        Converter<Jwt, Collection<GrantedAuthority>> combinedConverter = jwt -> {
+            Collection<GrantedAuthority> standardAuthorities = grantedAuthoritiesConverter.convert(jwt);
+            Collection<GrantedAuthority> groupAuthorities = groupAuthoritiesConverter.convert(jwt);
+
+            return Stream.concat(
+                    standardAuthorities.stream(),
+                    groupAuthorities != null ? groupAuthorities.stream() : Stream.empty()
+            ).collect(Collectors.toList());
+        };
 
         converter.setJwtGrantedAuthoritiesConverter(combinedConverter);
         return converter;
