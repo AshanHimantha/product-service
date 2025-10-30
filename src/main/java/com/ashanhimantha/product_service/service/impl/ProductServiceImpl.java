@@ -12,10 +12,21 @@ import com.ashanhimantha.product_service.repository.ProductRepository;
 import com.ashanhimantha.product_service.service.CategoryService;
 import com.ashanhimantha.product_service.service.ProductService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+
+import java.io.IOException;
 
 @Service
 @RequiredArgsConstructor // Lombok for clean constructor injection
@@ -24,6 +35,13 @@ public class ProductServiceImpl implements ProductService {
     private final ProductRepository productRepository;
     private final CategoryService categoryService; // We need this to find the category
     private final ProductMapper productMapper;     // Inject our new mapper
+    private final S3Client s3Client;
+
+    @Value("${aws.s3.bucket}")
+    private String bucket;
+
+    @Value("${aws.region:ap-southeast-2}")
+    private String awsRegion;
 
     @Override
     public AdminProductResponse createProduct(ProductRequest productRequest, String supplierId) {
@@ -132,5 +150,54 @@ public class ProductServiceImpl implements ProductService {
 
         // Map the results to the detailed AdminProductResponse DTO
         return productPage.map(productMapper::toAdminProductResponse);
+    }
+
+    @Override
+    @Transactional
+    public AdminProductResponse uploadProductImage(Long productId, MultipartFile file, String supplierId) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + productId));
+
+        // Authorization: allow if supplier owns this product or caller is SuperAdmin
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        boolean isSuperAdmin = auth != null && auth.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_SuperAdmins".equals(a.getAuthority()));
+
+        if (!isSuperAdmin && !product.getSupplierId().equals(supplierId)) {
+            throw new AccessDeniedException("You are not allowed to upload image for this product");
+        }
+
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("File is required");
+        }
+
+        try {
+            String originalFilename = file.getOriginalFilename();
+            String ext = "";
+            if (originalFilename != null && originalFilename.contains(".")) {
+                ext = originalFilename.substring(originalFilename.lastIndexOf('.'));
+            }
+
+            String key = String.format("products/%d/%s%s", productId, java.util.UUID.randomUUID(), ext);
+
+            PutObjectRequest putReq = PutObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(key)
+                    .contentType(file.getContentType())
+                    .acl(ObjectCannedACL.PUBLIC_READ)
+                    .build();
+
+            s3Client.putObject(putReq, RequestBody.fromBytes(file.getBytes()));
+
+            String url = String.format("https://%s.s3.%s.amazonaws.com/%s", bucket, awsRegion, key);
+
+            product.setImageUrl(url);
+            Product saved = productRepository.save(product);
+
+            return productMapper.toAdminProductResponse(saved);
+
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to upload file to S3", e);
+        }
     }
 }

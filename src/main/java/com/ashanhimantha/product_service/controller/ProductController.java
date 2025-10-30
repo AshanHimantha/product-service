@@ -15,6 +15,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -71,6 +73,18 @@ public class ProductController extends AbstractController {
 
         productService.deleteProduct(productId);
         return success("Product deleted successfully",null);
+    }
+
+    @PostMapping("/{productId}/image")
+    @PreAuthorize("hasAnyRole('Suppliers', 'SuperAdmins')")
+    public ResponseEntity<ApiResponse<AdminProductResponse>> uploadProductImage(
+            @PathVariable Long productId,
+            @RequestParam("file") MultipartFile file,
+            @AuthenticationPrincipal Jwt jwt) {
+
+        String supplierId = jwt.getSubject();
+        AdminProductResponse response = productService.uploadProductImage(productId, file, supplierId);
+        return success("Product image uploaded successfully", response);
     }
 
     // --- DATA STEWARD / ADMIN-FACING ENDPOINTS ---

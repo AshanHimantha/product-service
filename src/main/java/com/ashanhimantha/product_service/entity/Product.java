@@ -56,6 +56,10 @@ public class Product {
     @JoinColumn(name = "category_id")
     private Category category;
 
+    // New field to store the public S3 URL (or object key) for the product image
+    @Column(name = "image_url", columnDefinition = "TEXT")
+    private String imageUrl;
+
     @CreationTimestamp
     @Column(updatable = false)
     private Instant createdAt;

@@ -22,4 +22,5 @@ public class AdminProductResponse {
     private CategoryResponse category;
     private Instant createdAt;
     private Instant updatedAt;
+    private String imageUrl;
 }

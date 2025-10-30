@@ -24,5 +24,6 @@ public class ProductResponse {
     private CategoryResponse category; // Embeds the clean Category DTO
     private Instant createdAt;
     private Instant updatedAt;
+    private String imageUrl; // Public URL to the product image (S3)
 
 }

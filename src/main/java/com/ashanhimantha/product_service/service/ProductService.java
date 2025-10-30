@@ -8,6 +8,7 @@ import com.ashanhimantha.product_service.dto.response.ProductResponse;
 import com.ashanhimantha.product_service.entity.enums.ProductStatus; // Import enum
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.web.multipart.MultipartFile;
 
 public interface ProductService {
 
@@ -20,4 +21,9 @@ public interface ProductService {
     ProductResponse updateProductStatus(Long productId, ProductStatus newStatus);
     Page<ProductResponse> getProductsByStatus(Pageable pageable, String status);
     Page<AdminProductResponse> getProductsBySupplier(String supplierId, Pageable pageable);
+
+
+
+    // Upload a product image to S3 and associate the URL with the product
+    AdminProductResponse uploadProductImage(Long productId, MultipartFile file, String supplierId);
 }
