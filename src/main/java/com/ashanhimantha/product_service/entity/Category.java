@@ -23,6 +23,13 @@ public class Category {
 
     private String description;
 
+    @Column(length = 500)
+    private String imageUrl; // URL to category image (S3, CDN, etc.)
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "category_type_id")
+    private CategoryType categoryType; // The sizing/measurement template for this category
+
     @Column(nullable = false, columnDefinition = "boolean default true")
     private boolean active = true;
 }

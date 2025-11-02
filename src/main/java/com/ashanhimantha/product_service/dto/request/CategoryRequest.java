@@ -13,4 +13,7 @@ public class CategoryRequest {
 
     @Size(max = 255, message = "Description must not exceed 255 characters")
     private String description;
+
+
+    private Long categoryTypeId; // Optional: Link to a CategoryType for sizing options
 }

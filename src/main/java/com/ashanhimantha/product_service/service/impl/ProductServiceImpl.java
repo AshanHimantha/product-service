@@ -42,7 +42,7 @@ public class ProductServiceImpl implements ProductService {
     private final S3Client s3Client;
     private final ProductPricingStrategyFactory strategyFactory;
 
-    @Value("${aws.s3.bucket}")
+    @Value("${aws.s3.bucket-name}")
     private String bucket;
 
     @Value("${aws.region:ap-southeast-2}")

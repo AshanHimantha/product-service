@@ -11,6 +11,7 @@ public interface CategoryService {
     Category getCategoryById(Long categoryId);
     Page<Category> getAllCategories(Pageable pageable);
     List<Category> getAllCategoriesAsList();
-    Category updateCategory(Long categoryId, CategoryRequest categoryRequest); // ADD THIS
-    void deleteCategory(Long categoryId); // ADD THIS
+    Category updateCategory(Long categoryId, CategoryRequest categoryRequest);
+    void deleteCategory(Long categoryId);
+    void updateCategoryImage(Long categoryId, String imageUrl);
 }

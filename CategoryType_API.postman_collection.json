@@ -1,0 +1,483 @@
+{
+	"info": {
+		"_postman_id": "category-type-api-collection",
+		"name": "Category Type API",
+		"description": "API collection for managing Category Types (sizing/measurement templates)",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Get All Category Types",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{access_token}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/api/v1/category-types",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"category-types"
+					]
+				},
+				"description": "Retrieves all category types"
+			},
+			"response": []
+		},
+		{
+			"name": "Get Category Type by ID",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{access_token}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/api/v1/category-types/1",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"category-types",
+						"1"
+					]
+				},
+				"description": "Retrieves a specific category type by ID"
+			},
+			"response": []
+		},
+		{
+			"name": "Get Category Types by Sizing Type",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{access_token}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/api/v1/category-types/by-sizing-type/CLOTHING_LETTER",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"category-types",
+						"by-sizing-type",
+						"CLOTHING_LETTER"
+					]
+				},
+				"description": "Get category types by sizing type. Valid values: CLOTHING_LETTER, NUMERIC_SIZE, SHOE_SIZE, LENGTH_CM, LENGTH_INCH, VOLUME_ML, WEIGHT_G, NONE"
+			},
+			"response": []
+		},
+		{
+			"name": "Create Clothing Sizes - Letter",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{access_token}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"name\": \"Clothing Sizes - Letter\",\n  \"sizingType\": \"CLOTHING_LETTER\",\n  \"sizeOptions\": [\"XS\", \"S\", \"M\", \"L\", \"XL\", \"XXL\", \"XXXL\"]\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/v1/category-types",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"category-types"
+					]
+				},
+				"description": "Creates a new category type for clothing sizes (S, M, L, XL, etc.) - SuperAdmins only"
+			},
+			"response": []
+		},
+		{
+			"name": "Create Pants Sizes - Waist",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{access_token}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"name\": \"Pants Sizes - Waist\",\n  \"sizingType\": \"NUMERIC_SIZE\",\n  \"sizeOptions\": [\"28\", \"30\", \"32\", \"34\", \"36\", \"38\", \"40\", \"42\"]\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/v1/category-types",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"category-types"
+					]
+				},
+				"description": "Creates a new category type for pants waist sizes - SuperAdmins only"
+			},
+			"response": []
+		},
+		{
+			"name": "Create Shoe Sizes - US",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{access_token}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"name\": \"Shoe Sizes - US\",\n  \"sizingType\": \"SHOE_SIZE\",\n  \"sizeOptions\": [\"6\", \"7\", \"8\", \"9\", \"10\", \"11\", \"12\", \"13\", \"14\"]\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/v1/category-types",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"category-types"
+					]
+				},
+				"description": "Creates a new category type for US shoe sizes - SuperAdmins only"
+			},
+			"response": []
+		},
+		{
+			"name": "Create Weight - Metric",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{access_token}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"name\": \"Weight - Metric\",\n  \"sizingType\": \"WEIGHT_G\",\n  \"sizeOptions\": [\"100g\", \"250g\", \"500g\", \"750g\", \"1kg\", \"2kg\", \"5kg\"]\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/v1/category-types",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"category-types"
+					]
+				},
+				"description": "Creates a new category type for weight measurements - SuperAdmins only"
+			},
+			"response": []
+		},
+		{
+			"name": "Create Volume - Metric",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{access_token}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"name\": \"Volume - Metric\",\n  \"sizingType\": \"VOLUME_ML\",\n  \"sizeOptions\": [\"50ml\", \"100ml\", \"250ml\", \"500ml\", \"750ml\", \"1l\", \"2l\", \"5l\"]\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/v1/category-types",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"category-types"
+					]
+				},
+				"description": "Creates a new category type for volume measurements - SuperAdmins only"
+			},
+			"response": []
+		},
+		{
+			"name": "Create Length - Centimeters",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{access_token}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"name\": \"Length - Metric\",\n  \"sizingType\": \"LENGTH_CM\",\n  \"sizeOptions\": [\"10cm\", \"25cm\", \"50cm\", \"1m\", \"2m\", \"5m\", \"10m\"]\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/v1/category-types",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"category-types"
+					]
+				},
+				"description": "Creates a new category type for length measurements in cm/m - SuperAdmins only"
+			},
+			"response": []
+		},
+		{
+			"name": "Create No Sizing",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{access_token}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"name\": \"No Sizing\",\n  \"sizingType\": \"NONE\",\n  \"sizeOptions\": [\"One Size\"]\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/v1/category-types",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"category-types"
+					]
+				},
+				"description": "Creates a new category type for items with no sizing (accessories, etc.) - SuperAdmins only"
+			},
+			"response": []
+		},
+		{
+			"name": "Update Category Type",
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{access_token}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"name\": \"Clothing Sizes - Letter Updated\",\n  \"sizingType\": \"CLOTHING_LETTER\",\n  \"sizeOptions\": [\"XXS\", \"XS\", \"S\", \"M\", \"L\", \"XL\", \"XXL\", \"XXXL\"]\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/v1/category-types/1",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"category-types",
+						"1"
+					]
+				},
+				"description": "Updates an existing category type - SuperAdmins only"
+			},
+			"response": []
+		},
+		{
+			"name": "Delete Category Type",
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{access_token}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{base_url}}/api/v1/category-types/1",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"category-types",
+						"1"
+					]
+				},
+				"description": "Soft deletes a category type - SuperAdmins only"
+			},
+			"response": []
+		},
+		{
+			"name": "Create Category with Type",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{access_token}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"name\": \"T-Shirts\",\n  \"description\": \"Casual t-shirts for men and women\",\n  \"categoryTypeId\": 1\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/v1/categories",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"categories"
+					]
+				},
+				"description": "Creates a new category with associated category type. Upload image separately using upload-image endpoint."
+			},
+			"response": []
+		},
+		{
+			"name": "Update Category with Type",
+			"request": {
+				"method": "PUT",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer {{access_token}}",
+						"type": "text"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"name\": \"T-Shirts Updated\",\n  \"description\": \"Premium t-shirts for men and women\",\n  \"categoryTypeId\": 1\n}"
+				},
+				"url": {
+					"raw": "{{base_url}}/api/v1/categories/1",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"categories",
+						"1"
+					]
+				},
+				"description": "Updates an existing category. Image is managed separately via upload-image endpoint."
+			},
+			"response": []
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "access_token",
+			"value": "your_jwt_token_here",
+			"type": "string"
+		}
+	]
+}
+
