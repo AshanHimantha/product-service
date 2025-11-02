@@ -16,7 +16,6 @@ public interface ProductMapper {
     // --- DTO to Entity ---
     @Mapping(target = "id", ignore = true) // Ignore ID on creation
     @Mapping(target = "category", ignore = true) // We'll set this manually in the service
-    @Mapping(target = "supplierId", ignore = true) // Set from JWT
     @Mapping(target = "status", ignore = true) // Set by business logic
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)

@@ -35,8 +35,8 @@ public class SecurityConfig {
                 .securityMatcher(request -> {
                     String path = request.getServletPath();
                     String method = request.getMethod();
-                    // Only match GET requests to categories and products endpoints
                     return "GET".equals(method) &&
+                           !path.contains("/admin") && // Exclude any admin endpoints
                            (path.startsWith("/api/v1/categories") || path.startsWith("/api/v1/products"));
                 })
                 .csrf(AbstractHttpConfigurer::disable)

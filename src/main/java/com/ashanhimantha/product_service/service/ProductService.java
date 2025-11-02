@@ -1,29 +1,29 @@
 package com.ashanhimantha.product_service.service;
 
-
-
 import com.ashanhimantha.product_service.dto.request.ProductRequest;
 import com.ashanhimantha.product_service.dto.response.AdminProductResponse;
 import com.ashanhimantha.product_service.dto.response.ProductResponse;
-import com.ashanhimantha.product_service.entity.enums.ProductStatus; // Import enum
+import com.ashanhimantha.product_service.entity.enums.ProductStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
+
 public interface ProductService {
 
-
-    AdminProductResponse createProduct(ProductRequest productRequest, String supplierId);
-    ProductResponse updateProduct(Long productId, ProductRequest productRequest);
+    AdminProductResponse createProduct(ProductRequest productRequest, List<MultipartFile> files);
+    ProductResponse updateProduct(Long productId, ProductRequest productRequest, List<MultipartFile> files);
     void deleteProduct(Long productId);
-    Page<ProductResponse> getAllApprovedProducts(Pageable pageable);
-    ProductResponse getApprovedProductById(Long productId);
-    ProductResponse updateProductStatus(Long productId, ProductStatus newStatus);
+    Page<ProductResponse> getAllActiveProducts(Pageable pageable);
+    ProductResponse getActiveProductById(Long productId);
+
+    // Upload one or more product images to S3 and associate the URLs with the product
+    AdminProductResponse uploadProductImages(Long productId, List<MultipartFile> files);
+
+    // Admin endpoints for full product details
+    Page<AdminProductResponse> getAllProductsForAdmin(Pageable pageable);
+    AdminProductResponse getProductByIdForAdmin(Long productId);
+    AdminProductResponse updateProductStatusForAdmin(Long productId, ProductStatus newStatus);
     Page<ProductResponse> getProductsByStatus(Pageable pageable, String status);
-    Page<AdminProductResponse> getProductsBySupplier(String supplierId, Pageable pageable);
-
-
-
-    // Upload a product image to S3 and associate the URL with the product
-    AdminProductResponse uploadProductImage(Long productId, MultipartFile file, String supplierId);
 }

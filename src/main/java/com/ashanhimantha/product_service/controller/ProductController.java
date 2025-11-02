@@ -11,13 +11,11 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/v1/products")
@@ -25,99 +23,95 @@ import org.springframework.web.bind.annotation.*;
 public class ProductController extends AbstractController {
 
     private final ProductService productService;
+    private static final int MAX_IMAGES = 6;
 
-    // --- PUBLIC (CUSTOMER-FACING) ENDPOINTS ---
 
     @GetMapping
-    public ResponseEntity<ApiResponse<PaginatedResponse<ProductResponse>>> getAllApprovedProducts(Pageable pageable) {
-        Page<ProductResponse> productPage = productService.getAllApprovedProducts(pageable);
+    public ResponseEntity<ApiResponse<PaginatedResponse<ProductResponse>>> getAllActiveProducts(Pageable pageable) {
+        Page<ProductResponse> productPage = productService.getAllActiveProducts(pageable);
         PaginatedResponse<ProductResponse> responseData = new PaginatedResponse<>(productPage);
-        return success("Approved products retrieved successfully", responseData);
+        return success("Active products retrieved successfully", responseData);
     }
 
     @GetMapping("/{productId}")
-    public ResponseEntity<ApiResponse<ProductResponse>> getApprovedProductById(@PathVariable Long productId) {
-        ProductResponse product = productService.getApprovedProductById(productId);
-        return success("Approved product retrieved successfully", product);
+    public ResponseEntity<ApiResponse<ProductResponse>> getActiveProductById(@PathVariable Long productId) {
+        ProductResponse product = productService.getActiveProductById(productId);
+        return success("Active product retrieved successfully", product);
     }
 
-    // --- SUPPLIER-FACING ENDPOINTS ---
 
-    @PostMapping
-    @PreAuthorize("hasAnyRole('Suppliers', 'SuperAdmins')") // CORRECTED: Use hasAnyRole
+    // ========== ADMIN ENDPOINTS ==========
+
+    @GetMapping("/admin")
+    @PreAuthorize("hasRole('SuperAdmins')")
+    public ResponseEntity<ApiResponse<PaginatedResponse<AdminProductResponse>>> getAllProductsForAdmin(Pageable pageable) {
+        Page<AdminProductResponse> productPage = productService.getAllProductsForAdmin(pageable);
+        PaginatedResponse<AdminProductResponse> responseData = new PaginatedResponse<>(productPage);
+        return success("All products retrieved successfully for admin", responseData);
+    }
+
+    @GetMapping("/admin/{productId}")
+    @PreAuthorize("hasRole('SuperAdmins')")
+    public ResponseEntity<ApiResponse<AdminProductResponse>> getProductByIdForAdmin(@PathVariable Long productId) {
+        AdminProductResponse product = productService.getProductByIdForAdmin(productId);
+        return success("Product retrieved successfully for admin", product);
+    }
+
+
+    // ========== END ADMIN ENDPOINTS ==========
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('SuperAdmins')")
     public ResponseEntity<ApiResponse<AdminProductResponse>> createProduct(
-            @Valid @RequestBody ProductRequest productRequest,
-            @AuthenticationPrincipal Jwt jwt) {
+            @Valid @ModelAttribute ProductRequest productRequest,
+            @RequestParam(value = "files", required = false) MultipartFile[] files) {
 
-        String supplierId = jwt.getSubject();
-        AdminProductResponse createdProduct = productService.createProduct(productRequest, supplierId);
-        return created("Product submitted for approval successfully", createdProduct);
+        java.util.List<MultipartFile> fileList = files == null ? java.util.List.of() : java.util.Arrays.asList(files);
+        if (fileList.size() > MAX_IMAGES) {
+            throw new IllegalArgumentException("Maximum " + MAX_IMAGES + " images are allowed per product");
+        }
+
+        AdminProductResponse createdProduct = productService.createProduct(productRequest, fileList);
+        return created("Product created successfully", createdProduct);
     }
 
-    @PutMapping("/{productId}")
-    @PreAuthorize("hasRole('SuperAdmins') ") // CORRECTED: Use hasRole
+    @PutMapping(value = "/{productId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('SuperAdmins')")
     public ResponseEntity<ApiResponse<ProductResponse>> updateProduct(
             @PathVariable Long productId,
-            @Valid @RequestBody ProductRequest productRequest,
-            @AuthenticationPrincipal Jwt jwt) {
+            @Valid @ModelAttribute ProductRequest productRequest,
+            @RequestParam(value = "files", required = false) MultipartFile[] files) {
 
-        ProductResponse updatedProduct = productService.updateProduct(productId, productRequest);
-        return success("Product updated and is pending re-approval", updatedProduct);
+        java.util.List<MultipartFile> fileList = files == null ? java.util.List.of() : java.util.Arrays.asList(files);
+        if (fileList.size() > MAX_IMAGES) {
+            throw new IllegalArgumentException("Maximum " + MAX_IMAGES + " images are allowed per product");
+        }
+
+        ProductResponse updatedProduct = productService.updateProduct(productId, productRequest, fileList);
+        return success("Product updated successfully", updatedProduct);
     }
 
     @DeleteMapping("/{productId}")
-    @PreAuthorize("hasRole('SuperAdmins')") // CORRECTED: Use hasRole
-    public ResponseEntity<ApiResponse<Void>> deleteProduct(
-            @PathVariable Long productId,
-            @AuthenticationPrincipal Jwt jwt) {
-
+    @PreAuthorize("hasRole('SuperAdmins')")
+    public ResponseEntity<ApiResponse<Void>> deleteProduct(@PathVariable Long productId) {
         productService.deleteProduct(productId);
-        return success("Product deleted successfully",null);
+        return success("Product deleted successfully", null);
     }
 
-    @PostMapping("/{productId}/image")
-    @PreAuthorize("hasAnyRole('Suppliers', 'SuperAdmins')")
-    public ResponseEntity<ApiResponse<AdminProductResponse>> uploadProductImage(
+    @PostMapping("/{productId}/images")
+    @PreAuthorize("hasRole('SuperAdmins')")
+    public ResponseEntity<ApiResponse<AdminProductResponse>> uploadProductImages(
             @PathVariable Long productId,
-            @RequestParam("file") MultipartFile file,
-            @AuthenticationPrincipal Jwt jwt) {
+            @RequestParam("files") MultipartFile[] files) {
 
-        String supplierId = jwt.getSubject();
-        AdminProductResponse response = productService.uploadProductImage(productId, file, supplierId);
-        return success("Product image uploaded successfully", response);
-    }
+        java.util.List<MultipartFile> fileList = files == null ? java.util.List.of() : java.util.Arrays.asList(files);
+        if (fileList.size() > MAX_IMAGES) {
+            throw new IllegalArgumentException("Maximum " + MAX_IMAGES + " images are allowed per product");
+        }
 
-    // --- DATA STEWARD / ADMIN-FACING ENDPOINTS ---
-
-    @PutMapping("/{productId}/status")
-    @PreAuthorize("hasAnyRole('DataStewards', 'SuperAdmins')") // CORRECTED: Use hasAnyRole
-    public ResponseEntity<ApiResponse<ProductResponse>> updateProductStatus(
-            @PathVariable Long productId,
-            @Valid @RequestBody UpdateProductStatusRequest request) {
-
-        ProductResponse updatedProduct = productService.updateProductStatus(productId, request.getNewStatus());
-        return success("Product status updated successfully", updatedProduct);
-    }
-
-    @GetMapping("/status/pending")
-    @PreAuthorize("hasAnyRole('DataStewards', 'SuperAdmins')") // CORRECTED: Use hasAnyRole
-    public ResponseEntity<ApiResponse<PaginatedResponse<ProductResponse>>> getPendingApprovalProducts(Pageable pageable) {
-        Page<ProductResponse> productPage = productService.getProductsByStatus(pageable, "PENDING_APPROVAL");
-        PaginatedResponse<ProductResponse> responseData = new PaginatedResponse<>(productPage);
-        return success("Products pending approval retrieved successfully", responseData);
+        AdminProductResponse response = productService.uploadProductImages(productId, fileList);
+        return success("Product images uploaded successfully", response);
     }
 
 
-    @GetMapping("/supplier-products")
-    @PreAuthorize("hasAnyRole('Suppliers', 'SuperAdmins')")
-    public ResponseEntity<ApiResponse<PaginatedResponse<AdminProductResponse>>> getMyProducts(
-            Pageable pageable,
-            @AuthenticationPrincipal Jwt jwt) {
 
-        String supplierId = jwt.getSubject();
-        Page<AdminProductResponse> productPage = productService.getProductsBySupplier(supplierId, pageable);
-        PaginatedResponse<AdminProductResponse> responseData = new PaginatedResponse<>(productPage);
-
-        return success("Supplier's products retrieved successfully", responseData);
-    }
 }

@@ -15,12 +15,9 @@ public class AdminProductResponse {
     private String description;
     private Double unitCost; // <-- SENSITIVE DATA
     private Double sellingPrice;
-    private String producerInfo;
-    private Integer stockCount;
-    private String supplierId;
     private ProductStatus status;
     private CategoryResponse category;
     private Instant createdAt;
     private Instant updatedAt;
-    private String imageUrl;
+    private java.util.List<String> imageUrls;
 }

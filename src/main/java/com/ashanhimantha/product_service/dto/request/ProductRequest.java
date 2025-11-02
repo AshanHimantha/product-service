@@ -3,10 +3,7 @@ package com.ashanhimantha.product_service.dto.request;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 
-/**
- * DTO for creating or updating a Product.
- * This object represents the data sent by a client (e.g., a Supplier).
- */
+
 @Data
 public class ProductRequest {
 
@@ -27,12 +24,6 @@ public class ProductRequest {
     @Digits(integer = 8, fraction = 2)
     private Double sellingPrice;
 
-    @Size(max = 255, message = "Producer info cannot be longer than 255 characters")
-    private String producerInfo;
-
-    @NotNull(message = "Stock count is required")
-    @Min(value = 0, message = "Stock count cannot be negative")
-    private Integer stockCount;
 
     @NotNull(message = "Category ID is required")
     private Long categoryId;

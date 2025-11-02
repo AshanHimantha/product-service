@@ -15,26 +15,24 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.UUID;
 
 @Service
-@RequiredArgsConstructor // Lombok for clean constructor injection
+@RequiredArgsConstructor
 public class ProductServiceImpl implements ProductService {
 
     private final ProductRepository productRepository;
-    private final CategoryService categoryService; // We need this to find the category
-    private final ProductMapper productMapper;     // Inject our new mapper
+    private final CategoryService categoryService;
+    private final ProductMapper productMapper;
     private final S3Client s3Client;
 
     @Value("${aws.s3.bucket}")
@@ -43,8 +41,25 @@ public class ProductServiceImpl implements ProductService {
     @Value("${aws.region:ap-southeast-2}")
     private String awsRegion;
 
+    private static final int MAX_IMAGES = 6;
+
     @Override
-    public AdminProductResponse createProduct(ProductRequest productRequest, String supplierId) {
+    @Transactional
+    public AdminProductResponse createProduct(ProductRequest productRequest, List<MultipartFile> files) {
+        // Validate that at least 1 image is provided
+        if (files == null || files.isEmpty()) {
+            throw new IllegalArgumentException("At least 1 image is required when creating a product");
+        }
+
+        // Validate maximum images limit
+        int imageCount = (int) files.stream().filter(f -> f != null && !f.isEmpty()).count();
+        if (imageCount == 0) {
+            throw new IllegalArgumentException("At least 1 valid image is required when creating a product");
+        }
+        if (imageCount > MAX_IMAGES) {
+            throw new IllegalArgumentException("Cannot add " + imageCount + " images. Maximum allowed is " + MAX_IMAGES + " images.");
+        }
+
         // 1. Find the category by the ID from the request
         Category category = categoryService.getCategoryById(productRequest.getCategoryId());
 
@@ -52,39 +67,54 @@ public class ProductServiceImpl implements ProductService {
         Product product = productMapper.toProduct(productRequest);
 
         // 3. Set the fields that are not in the DTO
+        product.setStatus(ProductStatus.ACTIVE);
         product.setCategory(category);
-        product.setSupplierId(supplierId);
-        product.setStatus(ProductStatus.PENDING_APPROVAL);
-        product.setUnitCost(productRequest.getUnitCost());
-        product.setSellingPrice(productRequest.getSellingPrice());// New products must be approved
 
         // 4. Save the new product
         Product savedProduct = productRepository.save(product);
 
-        // 5. Map the saved entity to a Response DTO and return it
-        return productMapper.toAdminProductResponse(savedProduct);
+        // 5. Upload images and return the response
+        return uploadProductImages(savedProduct.getId(), files);
     }
 
-    // PUBLIC method - returns the safe DTO
+
     @Override
     @Transactional(readOnly = true)
-    public Page<ProductResponse> getAllApprovedProducts(Pageable pageable) {
-        Page<Product> productPage = productRepository.findByStatus(ProductStatus.APPROVED, pageable);
-        return productPage.map(productMapper::toProductResponse); // Uses the public mapper method
+    public Page<ProductResponse> getAllActiveProducts(Pageable pageable) {
+        Page<Product> productPage = productRepository.findByStatus(ProductStatus.ACTIVE, pageable);
+        return productPage.map(productMapper::toProductResponse);
+    }
+
+    /**
+     * NEWLY ADDED METHOD IMPLEMENTATION
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ProductResponse> getProductsByStatus(Pageable pageable, String status) {
+        try {
+            // Convert the status string to the ProductStatus enum
+            ProductStatus productStatus = ProductStatus.valueOf(status.toUpperCase());
+            Page<Product> productPage = productRepository.findByStatus(productStatus, pageable);
+            return productPage.map(productMapper::toProductResponse);
+        } catch (IllegalArgumentException e) {
+            // Handle cases where the status string is not a valid enum constant
+            throw new IllegalArgumentException("Invalid product status: " + status);
+        }
     }
 
     @Override
-    public ProductResponse getApprovedProductById(Long productId) {
+    @Transactional(readOnly = true)
+    public ProductResponse getActiveProductById(Long productId) {
         Product product = productRepository.findById(productId)
-                .filter(p -> p.getStatus() == ProductStatus.APPROVED) // Only return if approved
-                .orElseThrow(() -> new ResourceNotFoundException("Approved product not found with id: " + productId));
+                .filter(p -> p.getStatus() == ProductStatus.ACTIVE)
+                .orElseThrow(() -> new ResourceNotFoundException("Active product not found with id: " + productId));
 
         return productMapper.toProductResponse(product);
     }
 
     @Override
     @Transactional
-    public ProductResponse updateProduct(Long productId, ProductRequest productRequest) {
+    public ProductResponse updateProduct(Long productId, ProductRequest productRequest, List<MultipartFile> files) {
         Product existingProduct = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + productId));
 
@@ -95,12 +125,28 @@ public class ProductServiceImpl implements ProductService {
         existingProduct.setDescription(productRequest.getDescription());
         existingProduct.setUnitCost(productRequest.getUnitCost());
         existingProduct.setSellingPrice(productRequest.getSellingPrice());
-        existingProduct.setStockCount(productRequest.getStockCount());
-        existingProduct.setProducerInfo(productRequest.getProducerInfo());
         existingProduct.setCategory(newCategory);
-        existingProduct.setStatus(ProductStatus.PENDING_APPROVAL); // Reset status on update
 
         Product updatedProduct = productRepository.save(existingProduct);
+
+        // If files provided, upload them which will persist changes and attach image URLs
+        if (files != null && !files.isEmpty()) {
+            // Check if adding new images exceeds the limit
+            int currentImageCount = existingProduct.getImageUrls().size();
+            int newImageCount = files.size();
+            if (currentImageCount + newImageCount > MAX_IMAGES) {
+                throw new IllegalArgumentException(
+                        "Cannot add " + newImageCount + " images. Product already has " +
+                                currentImageCount + " images. Maximum allowed is " + MAX_IMAGES + " images.");
+            }
+
+            uploadProductImages(productId, files);
+            // Reload the product to include newly added image URLs
+            Product reloaded = productRepository.findById(productId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + productId));
+            return productMapper.toProductResponse(reloaded);
+        }
+
         return productMapper.toProductResponse(updatedProduct);
     }
 
@@ -113,91 +159,84 @@ public class ProductServiceImpl implements ProductService {
         productRepository.deleteById(productId);
     }
 
-    // --- NEWLY IMPLEMENTED METHODS ---
-
-    @Override
-    @Transactional
-    public ProductResponse updateProductStatus(Long productId, ProductStatus newStatus) {
-        Product product = productRepository.findById(productId)
-                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + productId));
-
-        if (newStatus == ProductStatus.PENDING_APPROVAL) {
-            throw new IllegalArgumentException("Cannot manually set a product's status to PENDING_APPROVAL.");
-        }
-
-        product.setStatus(newStatus);
-        Product updatedProduct = productRepository.save(product);
-        return productMapper.toProductResponse(updatedProduct);
-    }
-
-    @Override
-    public Page<ProductResponse> getProductsByStatus(Pageable pageable, String status) {
-        try {
-            ProductStatus productStatus = ProductStatus.valueOf(status.toUpperCase());
-            Page<Product> productPage = productRepository.findByStatus(productStatus, pageable);
-            return productPage.map(productMapper::toProductResponse);
-        } catch (IllegalArgumentException e) {
-            throw new IllegalArgumentException("Invalid product status provided: " + status);
-        }
-    }
-
-
     @Override
     @Transactional(readOnly = true)
-    public Page<AdminProductResponse> getProductsBySupplier(String supplierId, Pageable pageable) {
-        // Find all products for the given supplierId using the new repository method
-        Page<Product> productPage = productRepository.findBySupplierId(supplierId, pageable);
-
-        // Map the results to the detailed AdminProductResponse DTO
+    public Page<AdminProductResponse> getAllProductsForAdmin(Pageable pageable) {
+        Page<Product> productPage = productRepository.findAll(pageable);
         return productPage.map(productMapper::toAdminProductResponse);
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public AdminProductResponse getProductByIdForAdmin(Long productId) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + productId));
+        return productMapper.toAdminProductResponse(product);
+    }
+
+    @Override
     @Transactional
-    public AdminProductResponse uploadProductImage(Long productId, MultipartFile file, String supplierId) {
+    public AdminProductResponse updateProductStatusForAdmin(Long productId, ProductStatus newStatus) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + productId));
 
-        // Authorization: allow if supplier owns this product or caller is SuperAdmin
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        boolean isSuperAdmin = auth != null && auth.getAuthorities().stream()
-                .anyMatch(a -> "ROLE_SuperAdmins".equals(a.getAuthority()));
+        product.setStatus(newStatus);
+        Product updatedProduct = productRepository.save(product);
+        return productMapper.toAdminProductResponse(updatedProduct);
+    }
 
-        if (!isSuperAdmin && !product.getSupplierId().equals(supplierId)) {
-            throw new AccessDeniedException("You are not allowed to upload image for this product");
+    @Override
+    @Transactional
+    public AdminProductResponse uploadProductImages(Long productId, List<MultipartFile> files) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + productId));
+
+        if (files == null || files.isEmpty()) {
+            throw new IllegalArgumentException("At least one file is required");
         }
 
-        if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException("File is required");
+        // Validate maximum images limit
+        int currentImageCount = product.getImageUrls().size();
+        int newImageCount = (int) files.stream().filter(f -> f != null && !f.isEmpty()).count();
+
+        if (currentImageCount + newImageCount > MAX_IMAGES) {
+            throw new IllegalArgumentException(
+                    "Cannot add " + newImageCount + " images. Product already has " +
+                            currentImageCount + " images. Maximum allowed is " + MAX_IMAGES + " images.");
         }
 
         try {
+            return processUploadProductImages(product, files);
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to upload file(s) to S3", e);
+        }
+    }
+
+    private AdminProductResponse processUploadProductImages(Product product, List<MultipartFile> files) throws IOException {
+        for (MultipartFile file : files) {
+            if (file == null || file.isEmpty()) continue;
+
             String originalFilename = file.getOriginalFilename();
             String ext = "";
             if (originalFilename != null && originalFilename.contains(".")) {
                 ext = originalFilename.substring(originalFilename.lastIndexOf('.'));
             }
 
-            String key = String.format("products/%d/%s%s", productId, java.util.UUID.randomUUID(), ext);
+            String key = String.format("products/%d/%s%s", product.getId(), UUID.randomUUID(), ext);
 
             PutObjectRequest putReq = PutObjectRequest.builder()
                     .bucket(bucket)
                     .key(key)
                     .contentType(file.getContentType())
-                    .acl(ObjectCannedACL.PUBLIC_READ)
                     .build();
 
             s3Client.putObject(putReq, RequestBody.fromBytes(file.getBytes()));
 
             String url = String.format("https://%s.s3.%s.amazonaws.com/%s", bucket, awsRegion, key);
-
-            product.setImageUrl(url);
-            Product saved = productRepository.save(product);
-
-            return productMapper.toAdminProductResponse(saved);
-
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to upload file to S3", e);
+            product.getImageUrls().add(url);
         }
+
+        Product saved = productRepository.save(product);
+        return productMapper.toAdminProductResponse(saved);
     }
 }

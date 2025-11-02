@@ -5,25 +5,17 @@ import lombok.Data;
 
 import java.time.Instant;
 
-/**
- * DTO for API responses containing Product information.
- * This object is a safe representation of a Product, including its nested Category details.
- */
 @Data
 public class ProductResponse {
 
     private Long id;
     private String name;
     private String description;
-//    private Double unitCost;
     private Double sellingPrice;
-    private String producerInfo;
-    private Integer stockCount;
-//    private String supplierId;
     private ProductStatus status;
-    private CategoryResponse category; // Embeds the clean Category DTO
+    private CategoryResponse category;
     private Instant createdAt;
     private Instant updatedAt;
-    private String imageUrl; // Public URL to the product image (S3)
+    private java.util.List<String> imageUrls;
 
 }
