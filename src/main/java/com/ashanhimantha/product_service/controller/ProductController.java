@@ -1,11 +1,11 @@
 package com.ashanhimantha.product_service.controller;
 
 import com.ashanhimantha.product_service.dto.request.ProductRequest;
-import com.ashanhimantha.product_service.dto.request.UpdateProductStatusRequest;
 import com.ashanhimantha.product_service.dto.response.AdminProductResponse;
 import com.ashanhimantha.product_service.dto.response.ApiResponse;
 import com.ashanhimantha.product_service.dto.response.PaginatedResponse;
 import com.ashanhimantha.product_service.dto.response.ProductResponse;
+import com.ashanhimantha.product_service.dto.response.PublicProductResponse;
 import com.ashanhimantha.product_service.service.ProductService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -27,15 +27,15 @@ public class ProductController extends AbstractController {
 
 
     @GetMapping
-    public ResponseEntity<ApiResponse<PaginatedResponse<ProductResponse>>> getAllActiveProducts(Pageable pageable) {
-        Page<ProductResponse> productPage = productService.getAllActiveProducts(pageable);
-        PaginatedResponse<ProductResponse> responseData = new PaginatedResponse<>(productPage);
+    public ResponseEntity<ApiResponse<PaginatedResponse<PublicProductResponse>>> getAllActiveProducts(Pageable pageable) {
+        Page<PublicProductResponse> productPage = productService.getAllActiveProductsForPublic(pageable);
+        PaginatedResponse<PublicProductResponse> responseData = new PaginatedResponse<>(productPage);
         return success("Active products retrieved successfully", responseData);
     }
 
     @GetMapping("/{productId}")
-    public ResponseEntity<ApiResponse<ProductResponse>> getActiveProductById(@PathVariable Long productId) {
-        ProductResponse product = productService.getActiveProductById(productId);
+    public ResponseEntity<ApiResponse<PublicProductResponse>> getActiveProductById(@PathVariable Long productId) {
+        PublicProductResponse product = productService.getActiveProductByIdForPublic(productId);
         return success("Active product retrieved successfully", product);
     }
 

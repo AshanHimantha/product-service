@@ -4,6 +4,8 @@ import com.ashanhimantha.product_service.dto.request.ProductRequest;
 import com.ashanhimantha.product_service.dto.request.VariantRequest;
 import com.ashanhimantha.product_service.dto.response.AdminProductResponse;
 import com.ashanhimantha.product_service.dto.response.ProductResponse;
+import com.ashanhimantha.product_service.dto.response.PublicProductResponse;
+import com.ashanhimantha.product_service.dto.response.PublicVariantResponse;
 import com.ashanhimantha.product_service.entity.*;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -36,4 +38,12 @@ public interface ProductMapper {
     // --- Entity to Admin DTO ---
     @Mapping(target = "totalStock", expression = "java(product.getTotalStock())")
     AdminProductResponse toAdminProductResponse(Product product);
+
+    // --- Entity to Public DTO (for customers) ---
+    PublicProductResponse toPublicProductResponse(Product product);
+
+    // --- Variant Entity to Public Variant DTO ---
+    @Mapping(target = "price", source = "sellingPrice")
+    @Mapping(target = "availableStock", source = "quantity")
+    PublicVariantResponse toPublicVariantResponse(ProductVariant variant);
 }

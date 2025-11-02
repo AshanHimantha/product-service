@@ -4,6 +4,7 @@ import com.ashanhimantha.product_service.dto.request.ProductRequest;
 import com.ashanhimantha.product_service.dto.request.VariantRequest;
 import com.ashanhimantha.product_service.dto.response.AdminProductResponse;
 import com.ashanhimantha.product_service.dto.response.ProductResponse;
+import com.ashanhimantha.product_service.dto.response.PublicProductResponse;
 import com.ashanhimantha.product_service.entity.Category;
 import com.ashanhimantha.product_service.entity.Product;
 import com.ashanhimantha.product_service.entity.ProductVariant;
@@ -154,6 +155,23 @@ public class ProductServiceImpl implements ProductService {
                 .orElseThrow(() -> new ResourceNotFoundException("Active product not found with id: " + productId));
 
         return productMapper.toProductResponse(product);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<PublicProductResponse> getAllActiveProductsForPublic(Pageable pageable) {
+        Page<Product> productPage = productRepository.findByStatus(ProductStatus.ACTIVE, pageable);
+        return productPage.map(productMapper::toPublicProductResponse);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PublicProductResponse getActiveProductByIdForPublic(Long productId) {
+        Product product = productRepository.findById(productId)
+                .filter(p -> p.getStatus() == ProductStatus.ACTIVE)
+                .orElseThrow(() -> new ResourceNotFoundException("Active product not found with id: " + productId));
+
+        return productMapper.toPublicProductResponse(product);
     }
 
     @Override
