@@ -66,10 +66,7 @@ public class SecurityConfig {
         return http.build();
     }
 
-    /**
-     * This bean defines the converter that reads the JWT and extracts authorities.
-     * It combines the standard authorities converter with our custom group converter.
-     */
+
     @Bean
     public JwtAuthenticationConverter jwtAuthenticationConverter() {
         JwtAuthenticationConverter converter = new JwtAuthenticationConverter();

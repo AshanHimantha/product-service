@@ -2,6 +2,7 @@ package com.ashanhimantha.product_service.entity;
 
 
 import com.ashanhimantha.product_service.entity.enums.ProductStatus;
+import com.ashanhimantha.product_service.entity.enums.ProductType;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
@@ -26,11 +27,11 @@ public class Product {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Column(nullable = false)
-    private Double unitCost; // The price the business paid for one unit of the product.
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private Double sellingPrice; // The price the product is sold to the customer for.
+    private ProductType productType = ProductType.STOCK; // Default to STOCK type
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ProductStatus status;
@@ -38,6 +39,12 @@ public class Product {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "category_id")
     private Category category;
+
+    @OneToOne(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Stock stock; // For simple products without variants
+
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    private java.util.List<ProductVariant> variants = new java.util.ArrayList<>(); // For products with color/size variants
 
     @ElementCollection
     @CollectionTable(name = "product_images", joinColumns = @JoinColumn(name = "product_id"))
@@ -50,4 +57,23 @@ public class Product {
 
     @UpdateTimestamp
     private Instant updatedAt;
+
+    /**
+     * Check if product has variants
+     */
+    public boolean hasVariants() {
+        return variants != null && !variants.isEmpty();
+    }
+
+    /**
+     * Get total stock across all variants
+     */
+    public Integer getTotalStock() {
+        if (hasVariants()) {
+            return variants.stream()
+                    .mapToInt(ProductVariant::getQuantity)
+                    .sum();
+        }
+        return stock != null ? stock.getQuantity() : 0;
+    }
 }

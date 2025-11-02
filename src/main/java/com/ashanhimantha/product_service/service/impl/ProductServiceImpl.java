@@ -1,16 +1,20 @@
 package com.ashanhimantha.product_service.service.impl;
 
 import com.ashanhimantha.product_service.dto.request.ProductRequest;
+import com.ashanhimantha.product_service.dto.request.VariantRequest;
 import com.ashanhimantha.product_service.dto.response.AdminProductResponse;
 import com.ashanhimantha.product_service.dto.response.ProductResponse;
 import com.ashanhimantha.product_service.entity.Category;
 import com.ashanhimantha.product_service.entity.Product;
+import com.ashanhimantha.product_service.entity.ProductVariant;
 import com.ashanhimantha.product_service.entity.enums.ProductStatus;
 import com.ashanhimantha.product_service.exception.ResourceNotFoundException;
 import com.ashanhimantha.product_service.mapper.ProductMapper;
 import com.ashanhimantha.product_service.repository.ProductRepository;
 import com.ashanhimantha.product_service.service.CategoryService;
 import com.ashanhimantha.product_service.service.ProductService;
+import com.ashanhimantha.product_service.service.strategy.ProductPricingStrategy;
+import com.ashanhimantha.product_service.service.strategy.ProductPricingStrategyFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -25,6 +29,7 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -34,6 +39,7 @@ public class ProductServiceImpl implements ProductService {
     private final CategoryService categoryService;
     private final ProductMapper productMapper;
     private final S3Client s3Client;
+    private final ProductPricingStrategyFactory strategyFactory;
 
     @Value("${aws.s3.bucket}")
     private String bucket;
@@ -46,18 +52,20 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public AdminProductResponse createProduct(ProductRequest productRequest, List<MultipartFile> files) {
-        // Validate that at least 1 image is provided
-        if (files == null || files.isEmpty()) {
-            throw new IllegalArgumentException("At least 1 image is required when creating a product");
-        }
+        // Validate using the appropriate strategy
+        ProductPricingStrategy strategy = strategyFactory.getStrategy(productRequest.getProductType());
+        strategy.validateProductRequest(productRequest);
 
-        // Validate maximum images limit
-        int imageCount = (int) files.stream().filter(f -> f != null && !f.isEmpty()).count();
-        if (imageCount == 0) {
+        // Filter out empty/null files before counting
+        List<MultipartFile> validFiles = files != null ?
+                files.stream().filter(f -> f != null && !f.isEmpty()).collect(Collectors.toList())
+                : List.of();
+
+        if (validFiles.isEmpty()) {
             throw new IllegalArgumentException("At least 1 valid image is required when creating a product");
         }
-        if (imageCount > MAX_IMAGES) {
-            throw new IllegalArgumentException("Cannot add " + imageCount + " images. Maximum allowed is " + MAX_IMAGES + " images.");
+        if (validFiles.size() > MAX_IMAGES) {
+            throw new IllegalArgumentException("Cannot add " + validFiles.size() + " images. Maximum allowed is " + MAX_IMAGES + " images.");
         }
 
         // 1. Find the category by the ID from the request
@@ -70,11 +78,52 @@ public class ProductServiceImpl implements ProductService {
         product.setStatus(ProductStatus.ACTIVE);
         product.setCategory(category);
 
-        // 4. Save the new product
+        // 4. Apply pricing strategy based on product type (creates Stock entity if needed)
+        strategy.applyPricing(product, productRequest);
+
+        // 5. Save the product FIRST to get an ID (without variants yet)
         Product savedProduct = productRepository.save(product);
 
-        // 5. Upload images and return the response
-        return uploadProductImages(savedProduct.getId(), files);
+        // 6. If product has variants (colors/sizes), create them and link to saved product
+        if (productRequest.hasVariants()) {
+            for (VariantRequest variantRequest : productRequest.getVariants()) {
+                ProductVariant variant = productMapper.toProductVariant(variantRequest);
+                variant.setProduct(savedProduct); // Link variant to the product
+
+                // Generate SKU if not provided
+                if (variant.getSku() == null || variant.getSku().isBlank()) {
+                    variant.setSku(generateSKU(savedProduct, variant));
+                }
+                savedProduct.getVariants().add(variant);
+            }
+            // Save again to persist variants
+            savedProduct = productRepository.save(savedProduct);
+        }
+
+        // 7. Upload images and return the response
+        return uploadProductImages(savedProduct.getId(), validFiles);
+    }
+
+    /**
+     * Generates a simple Stock Keeping Unit (SKU) for a product variant.
+     * Example: PROD-RED-SML-1234
+     * @param product The parent product.
+     * @param variant The specific variant.
+     * @return A generated SKU string.
+     */
+    private String generateSKU(Product product, ProductVariant variant) {
+        String productName = product.getName().replaceAll("\\s+", "").toUpperCase();
+        if (productName.length() > 4) {
+            productName = productName.substring(0, 4);
+        }
+        String color = variant.getColor().replaceAll("[^a-zA-Z]", "").toUpperCase();
+        if (color.length() > 3) {
+            color = color.substring(0, 3);
+        }
+        String size = variant.getSize().toUpperCase();
+
+        // Use a timestamp component to reduce collisions
+        return String.format("%s-%s-%s-%d", productName, color, size, System.currentTimeMillis() % 10000);
     }
 
 
@@ -85,19 +134,14 @@ public class ProductServiceImpl implements ProductService {
         return productPage.map(productMapper::toProductResponse);
     }
 
-    /**
-     * NEWLY ADDED METHOD IMPLEMENTATION
-     */
     @Override
     @Transactional(readOnly = true)
     public Page<ProductResponse> getProductsByStatus(Pageable pageable, String status) {
         try {
-            // Convert the status string to the ProductStatus enum
             ProductStatus productStatus = ProductStatus.valueOf(status.toUpperCase());
             Page<Product> productPage = productRepository.findByStatus(productStatus, pageable);
             return productPage.map(productMapper::toProductResponse);
         } catch (IllegalArgumentException e) {
-            // Handle cases where the status string is not a valid enum constant
             throw new IllegalArgumentException("Invalid product status: " + status);
         }
     }
@@ -118,33 +162,43 @@ public class ProductServiceImpl implements ProductService {
         Product existingProduct = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + productId));
 
+        // Validate using the appropriate strategy
+        ProductPricingStrategy strategy = strategyFactory.getStrategy(productRequest.getProductType());
+        strategy.validateProductRequest(productRequest);
+
         Category newCategory = categoryService.getCategoryById(productRequest.getCategoryId());
 
         // Update fields
         existingProduct.setName(productRequest.getName());
         existingProduct.setDescription(productRequest.getDescription());
-        existingProduct.setUnitCost(productRequest.getUnitCost());
-        existingProduct.setSellingPrice(productRequest.getSellingPrice());
+        existingProduct.setProductType(productRequest.getProductType());
         existingProduct.setCategory(newCategory);
+
+        // Apply pricing strategy based on product type
+        strategy.applyPricing(existingProduct, productRequest);
+
+        // Note: This update method does not handle updating/adding/removing variants.
+        // A more complex implementation would be needed for that.
 
         Product updatedProduct = productRepository.save(existingProduct);
 
-        // If files provided, upload them which will persist changes and attach image URLs
+        // If files provided, upload them
         if (files != null && !files.isEmpty()) {
-            // Check if adding new images exceeds the limit
-            int currentImageCount = existingProduct.getImageUrls().size();
-            int newImageCount = files.size();
-            if (currentImageCount + newImageCount > MAX_IMAGES) {
-                throw new IllegalArgumentException(
-                        "Cannot add " + newImageCount + " images. Product already has " +
-                                currentImageCount + " images. Maximum allowed is " + MAX_IMAGES + " images.");
-            }
+            List<MultipartFile> validFiles = files.stream().filter(f -> f != null && !f.isEmpty()).collect(Collectors.toList());
+            if (!validFiles.isEmpty()) {
+                int currentImageCount = existingProduct.getImageUrls().size();
+                int newImageCount = validFiles.size();
+                if (currentImageCount + newImageCount > MAX_IMAGES) {
+                    throw new IllegalArgumentException(
+                            "Cannot add " + newImageCount + " images. Product already has " +
+                                    currentImageCount + " images. Maximum allowed is " + MAX_IMAGES + " images.");
+                }
 
-            uploadProductImages(productId, files);
-            // Reload the product to include newly added image URLs
-            Product reloaded = productRepository.findById(productId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + productId));
-            return productMapper.toProductResponse(reloaded);
+                uploadProductImages(productId, validFiles);
+                Product reloaded = productRepository.findById(productId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + productId));
+                return productMapper.toProductResponse(reloaded);
+            }
         }
 
         return productMapper.toProductResponse(updatedProduct);
@@ -192,12 +246,16 @@ public class ProductServiceImpl implements ProductService {
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + productId));
 
         if (files == null || files.isEmpty()) {
-            throw new IllegalArgumentException("At least one file is required");
+            throw new IllegalArgumentException("At least one file is required for upload");
         }
 
-        // Validate maximum images limit
+        List<MultipartFile> validFiles = files.stream().filter(f -> f != null && !f.isEmpty()).collect(Collectors.toList());
+        if (validFiles.isEmpty()) {
+            throw new IllegalArgumentException("No valid files provided for upload");
+        }
+
         int currentImageCount = product.getImageUrls().size();
-        int newImageCount = (int) files.stream().filter(f -> f != null && !f.isEmpty()).count();
+        int newImageCount = validFiles.size();
 
         if (currentImageCount + newImageCount > MAX_IMAGES) {
             throw new IllegalArgumentException(
@@ -206,7 +264,7 @@ public class ProductServiceImpl implements ProductService {
         }
 
         try {
-            return processUploadProductImages(product, files);
+            return processUploadProductImages(product, validFiles);
         } catch (IOException e) {
             throw new RuntimeException("Failed to upload file(s) to S3", e);
         }

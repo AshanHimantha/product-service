@@ -1,9 +1,11 @@
 package com.ashanhimantha.product_service.dto.response;
 
 import com.ashanhimantha.product_service.entity.enums.ProductStatus;
+import com.ashanhimantha.product_service.entity.enums.ProductType;
 import lombok.Data;
 import java.time.Instant;
 
+import java.util.List;
 /**
  * A detailed DTO for internal use (Admins, Suppliers).
  * It includes sensitive business data like the unitCost.
@@ -13,11 +15,13 @@ public class AdminProductResponse {
     private Long id;
     private String name;
     private String description;
-    private Double unitCost; // <-- SENSITIVE DATA
-    private Double sellingPrice;
+    private ProductType productType;
     private ProductStatus status;
     private CategoryResponse category;
+    private StockResponse stock; // Stock information (including prices) for simple STOCK products
+    private List<VariantResponse> variants; // Detailed variant info with costs and prices
+    private Integer totalStock; // Total stock across all variants
+    private List<String> imageUrls; // Product images
     private Instant createdAt;
     private Instant updatedAt;
-    private java.util.List<String> imageUrls;
 }

@@ -1,32 +1,39 @@
 package com.ashanhimantha.product_service.mapper;
 
-
 import com.ashanhimantha.product_service.dto.request.ProductRequest;
+import com.ashanhimantha.product_service.dto.request.VariantRequest;
 import com.ashanhimantha.product_service.dto.response.AdminProductResponse;
-import com.ashanhimantha.product_service.dto.response.CategoryResponse;
 import com.ashanhimantha.product_service.dto.response.ProductResponse;
-import com.ashanhimantha.product_service.entity.Category;
-import com.ashanhimantha.product_service.entity.Product;
+import com.ashanhimantha.product_service.entity.*;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
-@Mapper(componentModel = "spring") // Creates a Spring Bean for this mapper
+@Mapper(componentModel = "spring")
 public interface ProductMapper {
 
     // --- DTO to Entity ---
     @Mapping(target = "id", ignore = true) // Ignore ID on creation
     @Mapping(target = "category", ignore = true) // We'll set this manually in the service
     @Mapping(target = "status", ignore = true) // Set by business logic
+    @Mapping(target = "stock", ignore = true) // Handled by strategy pattern
+    @Mapping(target = "variants", ignore = true) // Handled manually in service
+    @Mapping(target = "imageUrls", ignore = true) // Handled separately
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
     Product toProduct(ProductRequest productRequest);
 
-    // This is the PUBLIC mapping
+    // --- Variant DTO to Entity ---
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "product", ignore = true) // Set manually in service
+    @Mapping(target = "isActive", ignore = true) // Default value
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
+    ProductVariant toProductVariant(VariantRequest variantRequest);
+
+    // --- Entity to DTO ---
     ProductResponse toProductResponse(Product product);
 
-    // THIS IS THE NEW INTERNAL MAPPING
+    // --- Entity to Admin DTO ---
+    @Mapping(target = "totalStock", expression = "java(product.getTotalStock())")
     AdminProductResponse toAdminProductResponse(Product product);
-
-    // MapStruct will automatically use this to map the nested Category object
-    CategoryResponse toCategoryResponse(Category category);
 }

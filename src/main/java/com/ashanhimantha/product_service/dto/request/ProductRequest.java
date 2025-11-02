@@ -1,8 +1,10 @@
 package com.ashanhimantha.product_service.dto.request;
 
+import com.ashanhimantha.product_service.entity.enums.ProductType;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 
+import java.util.List;
 
 @Data
 public class ProductRequest {
@@ -14,17 +16,16 @@ public class ProductRequest {
     @Size(max = 2000, message = "Description cannot be longer than 2000 characters")
     private String description;
 
-    @NotNull(message = "Unit cost is required")
-    @PositiveOrZero(message = "Unit cost must be zero or positive") // Cost could be zero for promotional items
-    @Digits(integer = 8, fraction = 2)
-    private Double unitCost;
-
-    @NotNull(message = "Selling price is required")
-    @Positive(message = "Selling price must be a positive number")
-    @Digits(integer = 8, fraction = 2)
-    private Double sellingPrice;
-
+    @NotNull(message = "Product type is required")
+    private ProductType productType = ProductType.STOCK;
 
     @NotNull(message = "Category ID is required")
     private Long categoryId;
+
+    // List of variants for products with color/size options
+    private List<VariantRequest> variants;
+
+    public boolean hasVariants() {
+        return variants != null && !variants.isEmpty();
+    }
 }
