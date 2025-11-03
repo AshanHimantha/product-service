@@ -2,7 +2,6 @@ package com.ashanhimantha.product_service.service.impl;
 
 import com.ashanhimantha.product_service.dto.request.CategoryTypeRequest;
 import com.ashanhimantha.product_service.entity.CategoryType;
-import com.ashanhimantha.product_service.entity.enums.SizingType;
 import com.ashanhimantha.product_service.exception.DuplicateResourceException;
 import com.ashanhimantha.product_service.exception.ResourceNotFoundException;
 import com.ashanhimantha.product_service.repository.CategoryTypeRepository;
@@ -22,19 +21,20 @@ public class CategoryTypeServiceImpl implements CategoryTypeService {
 
     @Override
     public CategoryType createCategoryType(CategoryTypeRequest request) {
-        // Check if name already exists
+        // Check if a category type with the same name already exists
         if (categoryTypeRepository.existsByName(request.getName())) {
             throw new DuplicateResourceException("A category type with the name '" + request.getName() + "' already exists.");
         }
 
         CategoryType categoryType = new CategoryType();
         categoryType.setName(request.getName());
-        categoryType.setSizingType(request.getSizingType());
         categoryType.setSizeOptionsFromList(request.getSizeOptions());
 
         try {
             return categoryTypeRepository.save(categoryType);
         } catch (DataIntegrityViolationException e) {
+            // This handles potential race conditions where a duplicate name is inserted
+            // between the check and the save operation.
             throw new DuplicateResourceException("A category type with the name '" + request.getName() + "' already exists.");
         }
     }
@@ -51,22 +51,18 @@ public class CategoryTypeServiceImpl implements CategoryTypeService {
     }
 
     @Override
-    public List<CategoryType> getCategoryTypesBySizingType(SizingType sizingType) {
-        return categoryTypeRepository.findBySizingType(sizingType);
-    }
-
-    @Override
     public CategoryType updateCategoryType(Long id, CategoryTypeRequest request) {
+        // First, retrieve the existing category type
         CategoryType existingCategoryType = getCategoryTypeById(id);
 
-        // Check if the new name conflicts with another category type
+        // Check if the name is being changed and if the new name already exists
         if (!existingCategoryType.getName().equals(request.getName())
                 && categoryTypeRepository.existsByName(request.getName())) {
             throw new DuplicateResourceException("A category type with the name '" + request.getName() + "' already exists.");
         }
 
+        // Update the properties of the existing entity
         existingCategoryType.setName(request.getName());
-        existingCategoryType.setSizingType(request.getSizingType());
         existingCategoryType.setSizeOptionsFromList(request.getSizeOptions());
 
         try {
@@ -79,6 +75,7 @@ public class CategoryTypeServiceImpl implements CategoryTypeService {
     @Override
     @Transactional
     public void deleteCategoryType(Long id) {
+        // Check if the category type exists before attempting to delete
         if (!categoryTypeRepository.existsById(id)) {
             throw new ResourceNotFoundException("Category type not found with id: " + id);
         }

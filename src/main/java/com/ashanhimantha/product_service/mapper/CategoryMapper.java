@@ -1,6 +1,7 @@
 package com.ashanhimantha.product_service.mapper;
 
 import com.ashanhimantha.product_service.dto.response.CategoryResponse;
+import com.ashanhimantha.product_service.dto.response.CategorySummaryResponse;
 import com.ashanhimantha.product_service.entity.Category;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -38,5 +39,23 @@ public class CategoryMapper {
                 .map(this::toResponse)
                 .collect(Collectors.toList());
     }
-}
 
+    public CategorySummaryResponse toSummaryResponse(Category category) {
+        if (category == null) {
+            return null;
+        }
+
+        CategorySummaryResponse response = new CategorySummaryResponse();
+        response.setId(category.getId());
+        response.setName(category.getName());
+        response.setImageUrl(category.getImageUrl());
+
+        return response;
+    }
+
+    public List<CategorySummaryResponse> toSummaryResponseList(List<Category> categories) {
+        return categories.stream()
+                .map(this::toSummaryResponse)
+                .collect(Collectors.toList());
+    }
+}

@@ -13,23 +13,18 @@ import com.ashanhimantha.product_service.exception.ResourceNotFoundException;
 import com.ashanhimantha.product_service.mapper.ProductMapper;
 import com.ashanhimantha.product_service.repository.ProductRepository;
 import com.ashanhimantha.product_service.service.CategoryService;
+import com.ashanhimantha.product_service.service.ImageUploadService;
 import com.ashanhimantha.product_service.service.ProductService;
 import com.ashanhimantha.product_service.service.strategy.ProductPricingStrategy;
 import com.ashanhimantha.product_service.service.strategy.ProductPricingStrategyFactory;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-import software.amazon.awssdk.core.sync.RequestBody;
-import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
-import java.io.IOException;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -39,16 +34,11 @@ public class ProductServiceImpl implements ProductService {
     private final ProductRepository productRepository;
     private final CategoryService categoryService;
     private final ProductMapper productMapper;
-    private final S3Client s3Client;
+    private final ImageUploadService imageUploadService;
     private final ProductPricingStrategyFactory strategyFactory;
 
-    @Value("${aws.s3.bucket-name}")
-    private String bucket;
-
-    @Value("${aws.region:ap-southeast-2}")
-    private String awsRegion;
-
     private static final int MAX_IMAGES = 6;
+    private static final String PRODUCT_FOLDER = "products/";
 
     @Override
     @Transactional
@@ -281,37 +271,14 @@ public class ProductServiceImpl implements ProductService {
                             currentImageCount + " images. Maximum allowed is " + MAX_IMAGES + " images.");
         }
 
-        try {
-            return processUploadProductImages(product, validFiles);
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to upload file(s) to S3", e);
-        }
-    }
+        // Use centralized ImageUploadService
+        List<String> uploadedUrls = imageUploadService.uploadImages(
+                validFiles,
+                PRODUCT_FOLDER + productId + "/",
+                "product"
+        );
 
-    private AdminProductResponse processUploadProductImages(Product product, List<MultipartFile> files) throws IOException {
-        for (MultipartFile file : files) {
-            if (file == null || file.isEmpty()) continue;
-
-            String originalFilename = file.getOriginalFilename();
-            String ext = "";
-            if (originalFilename != null && originalFilename.contains(".")) {
-                ext = originalFilename.substring(originalFilename.lastIndexOf('.'));
-            }
-
-            String key = String.format("products/%d/%s%s", product.getId(), UUID.randomUUID(), ext);
-
-            PutObjectRequest putReq = PutObjectRequest.builder()
-                    .bucket(bucket)
-                    .key(key)
-                    .contentType(file.getContentType())
-                    .build();
-
-            s3Client.putObject(putReq, RequestBody.fromBytes(file.getBytes()));
-
-            String url = String.format("https://%s.s3.%s.amazonaws.com/%s", bucket, awsRegion, key);
-            product.getImageUrls().add(url);
-        }
-
+        product.getImageUrls().addAll(uploadedUrls);
         Product saved = productRepository.save(product);
         return productMapper.toAdminProductResponse(saved);
     }

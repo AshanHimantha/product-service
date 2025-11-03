@@ -3,14 +3,15 @@ package com.ashanhimantha.product_service.controller;
 import com.ashanhimantha.product_service.dto.request.CategoryRequest;
 import com.ashanhimantha.product_service.dto.response.ApiResponse;
 import com.ashanhimantha.product_service.dto.response.CategoryResponse;
+import com.ashanhimantha.product_service.dto.response.CategorySummaryResponse;
 import com.ashanhimantha.product_service.entity.Category;
 import com.ashanhimantha.product_service.mapper.CategoryMapper;
 import com.ashanhimantha.product_service.service.CategoryService;
 import com.ashanhimantha.product_service.service.ImageUploadService;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -29,31 +30,42 @@ public class CategoryController extends AbstractController {
     private final ImageUploadService imageUploadService;
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<CategoryResponse>>> getAllCategories() {
+    @SuppressWarnings("unchecked")
+    public ResponseEntity<ApiResponse<?>> getAllCategories(
+            @RequestParam(value = "summary", required = false, defaultValue = "false") boolean summary) {
         List<Category> categories = categoryService.getAllCategoriesAsList();
-        List<CategoryResponse> response = categoryMapper.toResponseList(categories);
-        return success("Categories retrieved successfully", response);
+
+        if (summary) {
+            List<CategorySummaryResponse> response = categoryMapper.toSummaryResponseList(categories);
+            return (ResponseEntity<ApiResponse<?>>) (ResponseEntity<?>) success("Categories summary retrieved successfully", response);
+        } else {
+            List<CategoryResponse> response = categoryMapper.toResponseList(categories);
+            return (ResponseEntity<ApiResponse<?>>) (ResponseEntity<?>) success("Categories retrieved successfully", response);
+        }
     }
 
     @GetMapping("/{categoryId}")
-    public ResponseEntity<ApiResponse<CategoryResponse>> getCategoryById(@PathVariable Long categoryId) {
+    @SuppressWarnings("unchecked")
+    public ResponseEntity<ApiResponse<?>> getCategoryById(
+            @PathVariable Long categoryId,
+            @RequestParam(value = "summary", required = false, defaultValue = "false") boolean summary) {
         Category category = categoryService.getCategoryById(categoryId);
-        CategoryResponse response = categoryMapper.toResponse(category);
-        return success("Category retrieved successfully", response);
+
+        if (summary) {
+            CategorySummaryResponse response = categoryMapper.toSummaryResponse(category);
+            return (ResponseEntity<ApiResponse<?>>) (ResponseEntity<?>) success("Category summary retrieved successfully", response);
+        } else {
+            CategoryResponse response = categoryMapper.toResponse(category);
+            return (ResponseEntity<ApiResponse<?>>) (ResponseEntity<?>) success("Category retrieved successfully", response);
+        }
     }
 
-    @PostMapping(consumes = "multipart/form-data")
+
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('SuperAdmins')")
     public ResponseEntity<ApiResponse<CategoryResponse>> createCategory(
-            @RequestParam("name") @NotBlank @Size(min = 3, max = 100) String name,
-            @RequestParam(value = "description", required = false) @Size(max = 255) String description,
-            @RequestParam(value = "categoryTypeId", required = false) Long categoryTypeId,
+            @Valid @ModelAttribute CategoryRequest categoryRequest,
             @RequestParam(value = "image", required = false) MultipartFile image) {
-
-        CategoryRequest categoryRequest = new CategoryRequest();
-        categoryRequest.setName(name);
-        categoryRequest.setDescription(description);
-        categoryRequest.setCategoryTypeId(categoryTypeId);
 
         Category createdCategory = categoryService.createCategory(categoryRequest);
 
@@ -67,19 +79,25 @@ public class CategoryController extends AbstractController {
         return created("Category created successfully", response);
     }
 
-    @PutMapping(value = "/{categoryId}", consumes = "multipart/form-data")
+    // JSON endpoint for updating category without image
+    @PutMapping(value = "/{categoryId}", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @PreAuthorize("hasRole('SuperAdmins')")
+    public ResponseEntity<ApiResponse<CategoryResponse>> updateCategoryJson(
+            @PathVariable Long categoryId,
+            @Valid @RequestBody CategoryRequest categoryRequest) {
+
+        Category updatedCategory = categoryService.updateCategory(categoryId, categoryRequest);
+        CategoryResponse response = categoryMapper.toResponse(updatedCategory);
+        return success("Category updated successfully", response);
+    }
+
+    // Multipart endpoint for updating category with optional image
+    @PutMapping(value = "/{categoryId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('SuperAdmins')")
     public ResponseEntity<ApiResponse<CategoryResponse>> updateCategory(
             @PathVariable Long categoryId,
-            @RequestParam("name") @NotBlank @Size(min = 3, max = 100) String name,
-            @RequestParam(value = "description", required = false) @Size(max = 255) String description,
-            @RequestParam(value = "categoryTypeId", required = false) Long categoryTypeId,
+            @Valid @ModelAttribute CategoryRequest categoryRequest,
             @RequestParam(value = "image", required = false) MultipartFile image) {
-
-        CategoryRequest categoryRequest = new CategoryRequest();
-        categoryRequest.setName(name);
-        categoryRequest.setDescription(description);
-        categoryRequest.setCategoryTypeId(categoryTypeId);
 
         Category updatedCategory = categoryService.updateCategory(categoryId, categoryRequest);
 

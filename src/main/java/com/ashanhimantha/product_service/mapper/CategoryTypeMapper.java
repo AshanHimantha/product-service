@@ -18,8 +18,7 @@ public class CategoryTypeMapper {
         CategoryTypeResponse response = new CategoryTypeResponse();
         response.setId(categoryType.getId());
         response.setName(categoryType.getName());
-        response.setSizingType(categoryType.getSizingType());
-        response.setSizeOptions(categoryType.getSizeOptionsAsList()); // Only send as list
+        response.setSizeOptions(categoryType.getSizeOptionsAsList());
 
         return response;
     }
@@ -30,4 +29,3 @@ public class CategoryTypeMapper {
                 .collect(Collectors.toList());
     }
 }
-

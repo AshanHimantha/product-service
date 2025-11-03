@@ -37,13 +37,16 @@ public class SecurityConfig {
                     String method = request.getMethod();
                     return "GET".equals(method) &&
                            !path.contains("/admin") && // Exclude any admin endpoints
-                           (path.startsWith("/api/v1/categories") || path.startsWith("/api/v1/products"));
+                           (path.startsWith("/api/v1/categories") ||
+                            path.startsWith("/api/v1/products") ||
+                            path.startsWith("/api/v1/category-types"));
                 })
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/products/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/category-types/**").permitAll()
                         .anyRequest().denyAll() // This should never be reached due to securityMatcher
                 );
         // No OAuth2 configuration here - completely bypasses JWT validation

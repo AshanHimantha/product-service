@@ -12,6 +12,8 @@ import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -27,24 +29,33 @@ public class ImageUploadServiceImpl implements ImageUploadService {
     @Value("${aws.s3.base-url:}")
     private String s3BaseUrl;
 
+    @Value("${aws.region:ap-southeast-2}")
+    private String awsRegion;
+
     private static final String CATEGORY_FOLDER = "categories/";
+    private static final String PRODUCT_FOLDER = "products/";
     private static final long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
     @Override
     public String uploadCategoryImage(MultipartFile file, Long categoryId) {
-        System.out.println("=== IMAGE UPLOAD SERVICE DEBUG ===");
-        System.out.println("File: " + (file != null ? file.getOriginalFilename() : "null"));
-        System.out.println("Category ID: " + categoryId);
-        System.out.println("Bucket name: " + bucketName);
-        System.out.println("S3 base URL: " + s3BaseUrl);
+        log.debug("Uploading category image for category ID: {}", categoryId);
+        return uploadImage(file, CATEGORY_FOLDER, "category_" + categoryId);
+    }
+
+    @Override
+    public void deleteCategoryImage(String imageUrl) {
+        deleteImage(imageUrl);
+    }
+
+    @Override
+    public String uploadImage(MultipartFile file, String folder, String identifier) {
+        log.debug("Uploading image to folder: {} with identifier: {}", folder, identifier);
 
         validateFile(file);
-        System.out.println("File validation passed");
 
         String originalFilename = file.getOriginalFilename();
         String fileExtension = getFileExtension(originalFilename);
-        String fileName = CATEGORY_FOLDER + "category_" + categoryId + "_" + UUID.randomUUID() + fileExtension;
-        System.out.println("Generated S3 key: " + fileName);
+        String fileName = folder + identifier + "_" + UUID.randomUUID() + fileExtension;
 
         try {
             PutObjectRequest putObjectRequest = PutObjectRequest.builder()
@@ -54,30 +65,46 @@ public class ImageUploadServiceImpl implements ImageUploadService {
                     .contentLength(file.getSize())
                     .build();
 
-            System.out.println("Uploading to S3...");
             s3Client.putObject(putObjectRequest, RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
-            System.out.println("S3 upload completed successfully");
 
             String imageUrl = buildImageUrl(fileName);
-            log.info("Successfully uploaded category image: {}", imageUrl);
-            System.out.println("Final image URL: " + imageUrl);
-            System.out.println("=== END IMAGE UPLOAD SERVICE DEBUG ===");
+            log.info("Successfully uploaded image: {}", imageUrl);
             return imageUrl;
 
         } catch (IOException e) {
-            log.error("Failed to upload category image: {}", e.getMessage());
-            System.err.println("ERROR in uploadCategoryImage: " + e.getMessage());
-            e.printStackTrace();
-            throw new RuntimeException("Failed to upload image to S3", e);
-        } catch (Exception e) {
-            System.err.println("UNEXPECTED ERROR in uploadCategoryImage: " + e.getMessage());
-            e.printStackTrace();
+            log.error("Failed to upload image: {}", e.getMessage());
             throw new RuntimeException("Failed to upload image to S3", e);
         }
     }
 
     @Override
-    public void deleteCategoryImage(String imageUrl) {
+    public List<String> uploadImages(List<MultipartFile> files, String folder, String identifier) {
+        log.debug("Uploading {} images to folder: {} with identifier: {}", files.size(), folder, identifier);
+
+        List<String> imageUrls = new ArrayList<>();
+
+        for (MultipartFile file : files) {
+            if (file == null || file.isEmpty()) {
+                continue;
+            }
+
+            try {
+                String imageUrl = uploadImage(file, folder, identifier);
+                imageUrls.add(imageUrl);
+            } catch (Exception e) {
+                log.error("Failed to upload one image in batch: {}", e.getMessage());
+                // Clean up previously uploaded images on failure
+                deleteImages(imageUrls);
+                throw new RuntimeException("Failed to upload images to S3. All uploads rolled back.", e);
+            }
+        }
+
+        log.info("Successfully uploaded {} images", imageUrls.size());
+        return imageUrls;
+    }
+
+    @Override
+    public void deleteImage(String imageUrl) {
         if (imageUrl == null || imageUrl.isEmpty()) {
             return;
         }
@@ -91,11 +118,24 @@ public class ImageUploadServiceImpl implements ImageUploadService {
                     .build();
 
             s3Client.deleteObject(deleteObjectRequest);
-            log.info("Successfully deleted category image: {}", fileName);
+            log.info("Successfully deleted image: {}", fileName);
 
         } catch (Exception e) {
-            log.error("Failed to delete category image: {}", e.getMessage());
+            log.error("Failed to delete image: {}", e.getMessage());
             // Don't throw exception, just log it - deletion failure shouldn't block operations
+        }
+    }
+
+    @Override
+    public void deleteImages(List<String> imageUrls) {
+        if (imageUrls == null || imageUrls.isEmpty()) {
+            return;
+        }
+
+        log.debug("Deleting {} images", imageUrls.size());
+
+        for (String imageUrl : imageUrls) {
+            deleteImage(imageUrl);
         }
     }
 
@@ -140,7 +180,7 @@ public class ImageUploadServiceImpl implements ImageUploadService {
             return s3BaseUrl + "/" + fileName;
         }
         // Fallback to standard S3 URL format
-        return "https://" + bucketName + ".s3.amazonaws.com/" + fileName;
+        return String.format("https://%s.s3.%s.amazonaws.com/%s", bucketName, awsRegion, fileName);
     }
 
     private String extractFileNameFromUrl(String imageUrl) {

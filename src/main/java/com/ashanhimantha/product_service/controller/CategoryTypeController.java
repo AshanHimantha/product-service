@@ -4,7 +4,6 @@ import com.ashanhimantha.product_service.dto.request.CategoryTypeRequest;
 import com.ashanhimantha.product_service.dto.response.ApiResponse;
 import com.ashanhimantha.product_service.dto.response.CategoryTypeResponse;
 import com.ashanhimantha.product_service.entity.CategoryType;
-import com.ashanhimantha.product_service.entity.enums.SizingType;
 import com.ashanhimantha.product_service.mapper.CategoryTypeMapper;
 import com.ashanhimantha.product_service.service.CategoryTypeService;
 import jakarta.validation.Valid;
@@ -35,14 +34,6 @@ public class CategoryTypeController extends AbstractController {
         CategoryType categoryType = categoryTypeService.getCategoryTypeById(id);
         CategoryTypeResponse response = categoryTypeMapper.toResponse(categoryType);
         return success("Category type retrieved successfully", response);
-    }
-
-    @GetMapping("/by-sizing-type/{sizingType}")
-    public ResponseEntity<ApiResponse<List<CategoryTypeResponse>>> getCategoryTypesBySizingType(
-            @PathVariable SizingType sizingType) {
-        List<CategoryType> categoryTypes = categoryTypeService.getCategoryTypesBySizingType(sizingType);
-        List<CategoryTypeResponse> response = categoryTypeMapper.toResponseList(categoryTypes);
-        return success("Category types retrieved successfully", response);
     }
 
     @PostMapping
