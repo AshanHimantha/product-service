@@ -40,9 +40,6 @@ public class Product {
     @JoinColumn(name = "category_id")
     private Category category;
 
-    @OneToOne(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Stock stock; // For simple products without variants
-
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     private java.util.List<ProductVariant> variants = new java.util.ArrayList<>(); // For products with color/size variants
 
@@ -74,6 +71,6 @@ public class Product {
                     .mapToInt(ProductVariant::getQuantity)
                     .sum();
         }
-        return stock != null ? stock.getQuantity() : 0;
+        return 0;
     }
 }

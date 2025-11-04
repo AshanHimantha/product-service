@@ -2,13 +2,15 @@ package com.ashanhimantha.product_service.exception;
 
 import com.ashanhimantha.product_service.dto.response.ApiResponse;
 import jakarta.validation.ConstraintViolationException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.security.access.AccessDeniedException; // Import this
+import org.springframework.security.access.AccessDeniedException;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -87,6 +89,37 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Object>> handleIllegalArgument(IllegalArgumentException ex) {
         return ResponseEntity.badRequest()
                 .body(ApiResponse.error(ex.getMessage()));
+    }
+
+    /**
+     * Handles illegal state exceptions (e.g., trying to delete a resource that has dependencies).
+     * Returns a 400 Bad Request.
+     */
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ApiResponse<Object>> handleIllegalState(IllegalStateException ex) {
+        return ResponseEntity.badRequest()
+                .body(ApiResponse.error(ex.getMessage()));
+    }
+
+    /**
+     * Handles database constraint violations (e.g., foreign key constraints).
+     * Returns a 409 Conflict.
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse<Object>> handleDataIntegrityViolation(DataIntegrityViolationException ex) {
+        String message = "Cannot delete this resource because it is being used by other records.";
+
+        // Check if it's a foreign key constraint violation
+        if (ex.getMessage() != null && ex.getMessage().contains("foreign key constraint")) {
+            if (ex.getMessage().contains("categories")) {
+                message = "Cannot delete category because it is being used by one or more products.";
+            } else if (ex.getMessage().contains("category_types")) {
+                message = "Cannot delete category type because it is being used by one or more categories.";
+            }
+        }
+
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(ApiResponse.error(message));
     }
 
     /**

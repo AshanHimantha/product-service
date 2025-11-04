@@ -8,6 +8,7 @@ import com.ashanhimantha.product_service.exception.DuplicateResourceException;
 import com.ashanhimantha.product_service.exception.ResourceNotFoundException;
 import com.ashanhimantha.product_service.repository.CategoryRepository;
 import com.ashanhimantha.product_service.repository.CategoryTypeRepository;
+import com.ashanhimantha.product_service.repository.ProductRepository;
 import com.ashanhimantha.product_service.service.CategoryService;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -21,10 +22,14 @@ public class CategoryServiceImpl implements CategoryService {
 
     private final CategoryRepository categoryRepository;
     private final CategoryTypeRepository categoryTypeRepository;
+    private final ProductRepository productRepository;
 
-    public CategoryServiceImpl(CategoryRepository categoryRepository, CategoryTypeRepository categoryTypeRepository) {
+    public CategoryServiceImpl(CategoryRepository categoryRepository,
+                               CategoryTypeRepository categoryTypeRepository,
+                               ProductRepository productRepository) {
         this.categoryRepository = categoryRepository;
         this.categoryTypeRepository = categoryTypeRepository;
+        this.productRepository = productRepository;
     }
 
     @Override
@@ -88,10 +93,16 @@ public class CategoryServiceImpl implements CategoryService {
     @Override // ADD THIS METHOD
     @Transactional
     public void deleteCategory(Long categoryId) {
-        if (!categoryRepository.existsById(categoryId)) { // Check for existence first
-            throw new ResourceNotFoundException("Category not found with id: " + categoryId);
+        Category category = getCategoryById(categoryId); // Find first, will throw 404 if not found
+
+        // Check if any products are using this category
+        if (productRepository.existsByCategory(category)) {
+            // Soft delete: Set status to INACTIVE (using @SQLDelete annotation)
+            categoryRepository.deleteById(categoryId);
+        } else {
+            // Permanent delete: No relationships exist
+            categoryRepository.delete(category);
         }
-        categoryRepository.deleteById(categoryId); // This will trigger the @SQLDelete
     }
 
     @Override
@@ -100,5 +111,11 @@ public class CategoryServiceImpl implements CategoryService {
         Category category = getCategoryById(categoryId);
         category.setImageUrl(imageUrl);
         categoryRepository.save(category);
+    }
+
+    @Override
+    public boolean categoryHasProducts(Long categoryId) {
+        Category category = getCategoryById(categoryId);
+        return productRepository.existsByCategory(category);
     }
 }

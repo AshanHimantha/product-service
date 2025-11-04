@@ -25,6 +25,7 @@ public class CategoryMapper {
         response.setName(category.getName());
         response.setDescription(category.getDescription());
         response.setImageUrl(category.getImageUrl());
+        response.setStatus(category.getStatus());
 
         // Map category type if exists
         if (category.getCategoryType() != null) {

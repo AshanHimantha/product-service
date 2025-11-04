@@ -17,7 +17,6 @@ public interface ProductMapper {
     @Mapping(target = "id", ignore = true) // Ignore ID on creation
     @Mapping(target = "category", ignore = true) // We'll set this manually in the service
     @Mapping(target = "status", ignore = true) // Set by business logic
-    @Mapping(target = "stock", ignore = true) // Handled by strategy pattern
     @Mapping(target = "variants", ignore = true) // Handled manually in service
     @Mapping(target = "imageUrls", ignore = true) // Handled separately
     @Mapping(target = "createdAt", ignore = true)

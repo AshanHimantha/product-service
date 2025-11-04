@@ -4,6 +4,7 @@ import com.ashanhimantha.product_service.dto.request.CategoryTypeRequest;
 import com.ashanhimantha.product_service.entity.CategoryType;
 import com.ashanhimantha.product_service.exception.DuplicateResourceException;
 import com.ashanhimantha.product_service.exception.ResourceNotFoundException;
+import com.ashanhimantha.product_service.repository.CategoryRepository;
 import com.ashanhimantha.product_service.repository.CategoryTypeRepository;
 import com.ashanhimantha.product_service.service.CategoryTypeService;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,7 @@ import java.util.List;
 public class CategoryTypeServiceImpl implements CategoryTypeService {
 
     private final CategoryTypeRepository categoryTypeRepository;
+    private final CategoryRepository categoryRepository;
 
     @Override
     public CategoryType createCategoryType(CategoryTypeRequest request) {
@@ -76,9 +78,14 @@ public class CategoryTypeServiceImpl implements CategoryTypeService {
     @Transactional
     public void deleteCategoryType(Long id) {
         // Check if the category type exists before attempting to delete
-        if (!categoryTypeRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Category type not found with id: " + id);
+        CategoryType categoryType = categoryTypeRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Category type not found with id: " + id));
+
+        // Check if any categories are using this category type
+        if (categoryRepository.existsByCategoryType(categoryType)) {
+            throw new IllegalStateException("Cannot delete category type. It is being used by one or more categories.");
         }
+
         categoryTypeRepository.deleteById(id);
     }
 }

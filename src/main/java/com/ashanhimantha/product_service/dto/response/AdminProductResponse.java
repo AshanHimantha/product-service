@@ -18,7 +18,6 @@ public class AdminProductResponse {
     private ProductType productType;
     private ProductStatus status;
     private CategoryResponse category;
-    private StockResponse stock; // Stock information (including prices) for simple STOCK products
     private List<VariantResponse> variants; // Detailed variant info with costs and prices
     private Integer totalStock; // Total stock across all variants
     private List<String> imageUrls; // Product images

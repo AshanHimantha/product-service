@@ -14,4 +14,5 @@ public interface CategoryService {
     Category updateCategory(Long categoryId, CategoryRequest categoryRequest);
     void deleteCategory(Long categoryId);
     void updateCategoryImage(Long categoryId, String imageUrl);
+    boolean categoryHasProducts(Long categoryId);
 }

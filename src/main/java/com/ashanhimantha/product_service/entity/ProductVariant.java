@@ -26,8 +26,8 @@ public class ProductVariant {
     @JoinColumn(name = "product_id")
     private Product product;
 
-    @Column(nullable = false)
-    private String color; // e.g., "Red", "Blue", "Black"
+    @Column(length = 50, nullable = true)
+    private String color; // null = no color (treated as "NONE")
 
     @Column(nullable = false)
     private String size; // e.g., "S", "M", "L", "XL"

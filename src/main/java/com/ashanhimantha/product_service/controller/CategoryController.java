@@ -119,11 +119,25 @@ public class CategoryController extends AbstractController {
     @PreAuthorize("hasRole('SuperAdmins')")
     public ResponseEntity<ApiResponse<Void>> deleteCategory(@PathVariable Long categoryId) {
         Category category = categoryService.getCategoryById(categoryId);
-        if (category.getImageUrl() != null && !category.getImageUrl().isEmpty()) {
-            imageUploadService.deleteCategoryImage(category.getImageUrl());
+
+        // Check if category has relationships with products
+        boolean hasProducts = categoryService.categoryHasProducts(categoryId);
+
+        if (!hasProducts) {
+            // Permanent delete: Delete the image from S3 first
+            if (category.getImageUrl() != null && !category.getImageUrl().isEmpty()) {
+                imageUploadService.deleteCategoryImage(category.getImageUrl());
+            }
         }
+        // If hasProducts, it's a soft delete - keep the image for historical data
+
         categoryService.deleteCategory(categoryId);
-        return success("Category deleted successfully", null);
+
+        String message = hasProducts
+            ? "Category deactivated successfully (soft delete)"
+            : "Category deleted permanently";
+
+        return success(message, null);
     }
 
     @PostMapping("/{categoryId}/upload-image")

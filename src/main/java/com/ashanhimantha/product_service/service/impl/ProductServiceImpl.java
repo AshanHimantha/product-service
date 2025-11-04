@@ -69,7 +69,7 @@ public class ProductServiceImpl implements ProductService {
         product.setStatus(ProductStatus.ACTIVE);
         product.setCategory(category);
 
-        // 4. Apply pricing strategy based on product type (creates Stock entity if needed)
+        // 4. Apply pricing strategy based on product type
         strategy.applyPricing(product, productRequest);
 
         // 5. Save the product FIRST to get an ID (without variants yet)
