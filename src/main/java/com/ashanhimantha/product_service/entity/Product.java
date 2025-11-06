@@ -1,8 +1,8 @@
 package com.ashanhimantha.product_service.entity;
 
 
-import com.ashanhimantha.product_service.entity.enums.ProductStatus;
 import com.ashanhimantha.product_service.entity.enums.ProductType;
+import com.ashanhimantha.product_service.entity.enums.Status;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
@@ -34,7 +34,7 @@ public class Product {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private ProductStatus status;
+    private Status status;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "category_id")

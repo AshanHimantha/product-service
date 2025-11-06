@@ -31,8 +31,7 @@ public class SecurityConfig {
     @Order(1)
     public SecurityFilterChain publicSecurityFilterChain(HttpSecurity http) throws Exception {
         // First filter chain for public GET endpoints only - NO JWT validation
-        http
-                .securityMatcher(request -> {
+        http.securityMatcher(request -> {
                     String path = request.getServletPath();
                     String method = request.getMethod();
                     return "GET".equals(method) &&

@@ -2,9 +2,10 @@ package com.ashanhimantha.product_service.entity;
 
 
 
-import com.ashanhimantha.product_service.entity.enums.CategoryStatus;
+import com.ashanhimantha.product_service.entity.enums.Status;
 import jakarta.persistence.*;
 import lombok.Data;
+import org.hibernate.annotations.SQLDelete;
 
 @Entity
 @Table(name = "categories")
@@ -29,5 +30,5 @@ public class Category {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private CategoryStatus status = CategoryStatus.ACTIVE;
+    private Status status = Status.ACTIVE;
 }

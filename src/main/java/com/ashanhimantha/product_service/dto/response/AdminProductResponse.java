@@ -1,7 +1,7 @@
 package com.ashanhimantha.product_service.dto.response;
 
-import com.ashanhimantha.product_service.entity.enums.ProductStatus;
 import com.ashanhimantha.product_service.entity.enums.ProductType;
+import com.ashanhimantha.product_service.entity.enums.Status;
 import lombok.Data;
 import java.time.Instant;
 
@@ -16,7 +16,7 @@ public class AdminProductResponse {
     private String name;
     private String description;
     private ProductType productType;
-    private ProductStatus status;
+    private Status status;
     private CategoryResponse category;
     private List<VariantResponse> variants; // Detailed variant info with costs and prices
     private Integer totalStock; // Total stock across all variants

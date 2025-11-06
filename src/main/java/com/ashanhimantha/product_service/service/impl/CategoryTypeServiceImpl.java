@@ -2,6 +2,7 @@ package com.ashanhimantha.product_service.service.impl;
 
 import com.ashanhimantha.product_service.dto.request.CategoryTypeRequest;
 import com.ashanhimantha.product_service.entity.CategoryType;
+import com.ashanhimantha.product_service.entity.enums.Status;
 import com.ashanhimantha.product_service.exception.DuplicateResourceException;
 import com.ashanhimantha.product_service.exception.ResourceNotFoundException;
 import com.ashanhimantha.product_service.repository.CategoryRepository;
@@ -66,11 +67,30 @@ public class CategoryTypeServiceImpl implements CategoryTypeService {
         // Update the properties of the existing entity
         existingCategoryType.setName(request.getName());
         existingCategoryType.setSizeOptionsFromList(request.getSizeOptions());
+        existingCategoryType.setStatus(request.getStatus());
 
         try {
             return categoryTypeRepository.save(existingCategoryType);
         } catch (DataIntegrityViolationException e) {
             throw new DuplicateResourceException("A category type with the name '" + request.getName() + "' already exists.");
+        }
+    }
+
+    @Override
+    public CategoryType updateCategoryTypeStatus(Long id, String status) {
+        // Retrieve existing category type
+        CategoryType existing = getCategoryTypeById(id);
+
+        if (status == null || status.isBlank()) {
+            throw new IllegalArgumentException("Status must be provided");
+        }
+
+        try {
+            Status s = Status.valueOf(status.trim().toUpperCase());
+            existing.setStatus(s);
+            return categoryTypeRepository.save(existing);
+        } catch (IllegalArgumentException ex) {
+            throw new IllegalArgumentException("Invalid status value: " + status + ". Allowed values: ACTIVE, INACTIVE");
         }
     }
 

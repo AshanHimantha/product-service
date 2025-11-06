@@ -1,11 +1,10 @@
 package com.ashanhimantha.product_service.entity;
 
+import com.ashanhimantha.product_service.entity.enums.Status;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.UpdateTimestamp;
-import org.hibernate.annotations.Where;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -18,8 +17,6 @@ import java.util.List;
 @Entity
 @Table(name = "category_types")
 @Data
-@SQLDelete(sql = "UPDATE category_types SET active = false WHERE id = ?")
-@Where(clause = "active = true")
 public class CategoryType {
 
     @Id
@@ -29,16 +26,12 @@ public class CategoryType {
     @Column(nullable = false, unique = true)
     private String name; // e.g., "Clothing Sizes - Letter", "Pants Sizes", "Shoe Sizes"
 
-    /**
-     * Available size/measurement options for this type
-     * Stored as comma-separated values
-     * Example: "S,M,L,XL,XXL" or "28,30,32,34,36" or "7,8,9,10,11,12"
-     */
     @Column(nullable = false, length = 500)
     private String sizeOptions;
 
-    @Column(nullable = false, columnDefinition = "boolean default true")
-    private boolean active = true;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Status status = Status.ACTIVE;
 
     @CreationTimestamp
     @Column(updatable = false)

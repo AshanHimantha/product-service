@@ -19,6 +19,7 @@ public class CategoryTypeMapper {
         response.setId(categoryType.getId());
         response.setName(categoryType.getName());
         response.setSizeOptions(categoryType.getSizeOptionsAsList());
+        response.setStatus(categoryType.getStatus());
 
         return response;
     }

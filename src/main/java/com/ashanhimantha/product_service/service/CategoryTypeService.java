@@ -10,5 +10,6 @@ public interface CategoryTypeService {
     CategoryType getCategoryTypeById(Long id);
     List<CategoryType> getAllCategoryTypes();
     CategoryType updateCategoryType(Long id, CategoryTypeRequest request);
+    CategoryType updateCategoryTypeStatus(Long id, String status);
     void deleteCategoryType(Long id);
 }

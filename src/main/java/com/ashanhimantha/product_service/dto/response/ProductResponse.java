@@ -1,18 +1,20 @@
 package com.ashanhimantha.product_service.dto.response;
 
-import com.ashanhimantha.product_service.entity.enums.ProductStatus;
+import com.ashanhimantha.product_service.entity.enums.ProductType;
+import com.ashanhimantha.product_service.entity.enums.Status;
 import lombok.Data;
 
 import java.time.Instant;
-
 import java.util.List;
+
 @Data
 public class ProductResponse {
 
     private Long id;
     private String name;
     private String description;
-    private ProductStatus status;
+    private ProductType productType;
+    private Status status;
     private CategoryResponse category;
     private Instant createdAt;
     private Instant updatedAt;

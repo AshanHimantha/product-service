@@ -13,6 +13,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/category-types")
@@ -50,9 +51,23 @@ public class CategoryTypeController extends AbstractController {
     public ResponseEntity<ApiResponse<CategoryTypeResponse>> updateCategoryType(
             @PathVariable Long id,
             @Valid @RequestBody CategoryTypeRequest request) {
+
+        System.out.println(request.getStatus());
         CategoryType updatedCategoryType = categoryTypeService.updateCategoryType(id, request);
         CategoryTypeResponse response = categoryTypeMapper.toResponse(updatedCategoryType);
         return success("Category type updated successfully", response);
+    }
+
+    @PatchMapping("/{id}/status")
+    @PreAuthorize("hasRole('SuperAdmins')")
+    public ResponseEntity<ApiResponse<CategoryTypeResponse>> updateCategoryTypeStatus(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body) {
+
+        String status = body.get("status");
+        CategoryType updatedCategoryType = categoryTypeService.updateCategoryTypeStatus(id, status);
+        CategoryTypeResponse response = categoryTypeMapper.toResponse(updatedCategoryType);
+        return success("Category type status updated successfully", response);
     }
 
     @DeleteMapping("/{id}")

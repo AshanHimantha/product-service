@@ -8,7 +8,7 @@ import com.ashanhimantha.product_service.dto.response.PublicProductResponse;
 import com.ashanhimantha.product_service.entity.Category;
 import com.ashanhimantha.product_service.entity.Product;
 import com.ashanhimantha.product_service.entity.ProductVariant;
-import com.ashanhimantha.product_service.entity.enums.ProductStatus;
+import com.ashanhimantha.product_service.entity.enums.Status;
 import com.ashanhimantha.product_service.exception.ResourceNotFoundException;
 import com.ashanhimantha.product_service.mapper.ProductMapper;
 import com.ashanhimantha.product_service.repository.ProductRepository;
@@ -66,7 +66,7 @@ public class ProductServiceImpl implements ProductService {
         Product product = productMapper.toProduct(productRequest);
 
         // 3. Set the fields that are not in the DTO
-        product.setStatus(ProductStatus.ACTIVE);
+        product.setStatus(Status.ACTIVE);
         product.setCategory(category);
 
         // 4. Apply pricing strategy based on product type
@@ -121,7 +121,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional(readOnly = true)
     public Page<ProductResponse> getAllActiveProducts(Pageable pageable) {
-        Page<Product> productPage = productRepository.findByStatus(ProductStatus.ACTIVE, pageable);
+        Page<Product> productPage = productRepository.findByStatus(Status.ACTIVE, pageable);
         return productPage.map(productMapper::toProductResponse);
     }
 
@@ -129,7 +129,7 @@ public class ProductServiceImpl implements ProductService {
     @Transactional(readOnly = true)
     public Page<ProductResponse> getProductsByStatus(Pageable pageable, String status) {
         try {
-            ProductStatus productStatus = ProductStatus.valueOf(status.toUpperCase());
+            Status productStatus = Status.valueOf(status.toUpperCase());
             Page<Product> productPage = productRepository.findByStatus(productStatus, pageable);
             return productPage.map(productMapper::toProductResponse);
         } catch (IllegalArgumentException e) {
@@ -141,7 +141,7 @@ public class ProductServiceImpl implements ProductService {
     @Transactional(readOnly = true)
     public ProductResponse getActiveProductById(Long productId) {
         Product product = productRepository.findById(productId)
-                .filter(p -> p.getStatus() == ProductStatus.ACTIVE)
+                .filter(p -> p.getStatus() == Status.ACTIVE)
                 .orElseThrow(() -> new ResourceNotFoundException("Active product not found with id: " + productId));
 
         return productMapper.toProductResponse(product);
@@ -150,7 +150,7 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional(readOnly = true)
     public Page<PublicProductResponse> getAllActiveProductsForPublic(Pageable pageable) {
-        Page<Product> productPage = productRepository.findByStatus(ProductStatus.ACTIVE, pageable);
+        Page<Product> productPage = productRepository.findByStatus(Status.ACTIVE, pageable);
         return productPage.map(productMapper::toPublicProductResponse);
     }
 
@@ -158,7 +158,7 @@ public class ProductServiceImpl implements ProductService {
     @Transactional(readOnly = true)
     public PublicProductResponse getActiveProductByIdForPublic(Long productId) {
         Product product = productRepository.findById(productId)
-                .filter(p -> p.getStatus() == ProductStatus.ACTIVE)
+                .filter(p -> p.getStatus() == Status.ACTIVE)
                 .orElseThrow(() -> new ResourceNotFoundException("Active product not found with id: " + productId));
 
         return productMapper.toPublicProductResponse(product);
@@ -238,7 +238,7 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
-    public AdminProductResponse updateProductStatusForAdmin(Long productId, ProductStatus newStatus) {
+    public AdminProductResponse updateProductStatusForAdmin(Long productId, Status newStatus) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + productId));
 

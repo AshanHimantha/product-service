@@ -1,6 +1,8 @@
 package com.ashanhimantha.product_service.dto.request;
 
+import com.ashanhimantha.product_service.entity.enums.Status;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
@@ -14,5 +16,8 @@ public class CategoryRequest {
     @Size(max = 255, message = "Description must not exceed 255 characters")
     private String description;
 
-    private Long categoryTypeId; // Optional: Link to a CategoryType for sizing options
+@NotNull(message = "Category Type is required")
+private Long categoryTypeId; // Optional: Link to a CategoryType for sizing options
+
+    private Status status;
 }
