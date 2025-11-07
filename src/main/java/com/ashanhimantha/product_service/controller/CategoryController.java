@@ -8,8 +8,8 @@ import com.ashanhimantha.product_service.entity.Category;
 import com.ashanhimantha.product_service.mapper.CategoryMapper;
 import com.ashanhimantha.product_service.service.CategoryService;
 import com.ashanhimantha.product_service.service.ImageUploadService;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -167,5 +167,17 @@ public class CategoryController extends AbstractController {
             categoryService.updateCategoryImage(categoryId, null);
         }
         return success("Category image deleted successfully", null);
+    }
+
+    @PatchMapping("/{categoryId}/status")
+    @PreAuthorize("hasRole('SuperAdmins')")
+    public ResponseEntity<ApiResponse<CategoryResponse>> updateCategoryStatus(
+            @PathVariable Long categoryId,
+            @RequestBody Map<String, String> body) {
+
+        String status = body.get("status");
+        Category updatedCategory = categoryService.updateCategoryStatus(categoryId, status);
+        CategoryResponse response = categoryMapper.toResponse(updatedCategory);
+        return success("Category status updated successfully", response);
     }
 }
