@@ -34,6 +34,15 @@ public class SecurityConfig {
         http.securityMatcher(request -> {
                     String path = request.getServletPath();
                     String method = request.getMethod();
+
+                    // Allow Swagger/OpenAPI endpoints
+                    if (path.startsWith("/swagger-ui") ||
+                        path.startsWith("/v3/api-docs") ||
+                        path.startsWith("/api-docs") ||
+                        path.equals("/swagger-ui.html")) {
+                        return true;
+                    }
+
                     return "GET".equals(method) &&
                            !path.contains("/admin") && // Exclude any admin endpoints
                            (path.startsWith("/api/v1/categories") ||
@@ -43,6 +52,9 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
+                        // Swagger UI and OpenAPI endpoints
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/api-docs/**", "/swagger-ui.html").permitAll()
+                        // Public GET endpoints
                         .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/products/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/category-types/**").permitAll()

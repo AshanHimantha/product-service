@@ -8,6 +8,10 @@ import com.ashanhimantha.product_service.entity.Category;
 import com.ashanhimantha.product_service.mapper.CategoryMapper;
 import com.ashanhimantha.product_service.service.CategoryService;
 import com.ashanhimantha.product_service.service.ImageUploadService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -23,15 +27,21 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/categories")
 @RequiredArgsConstructor
+@Tag(name = "Categories", description = "Category management APIs for organizing products")
 public class CategoryController extends AbstractController {
 
     private final CategoryService categoryService;
     private final CategoryMapper categoryMapper;
     private final ImageUploadService imageUploadService;
 
+    @Operation(
+            summary = "Get all categories",
+            description = "Retrieve all categories with optional summary format. Use summary=true for basic info only."
+    )
     @GetMapping
     @SuppressWarnings("unchecked")
     public ResponseEntity<ApiResponse<?>> getAllCategories(
+            @Parameter(description = "Return summary format (id, name, image only)", example = "false")
             @RequestParam(value = "summary", required = false, defaultValue = "false") boolean summary) {
         List<Category> categories = categoryService.getAllCategoriesAsList();
 
@@ -44,10 +54,15 @@ public class CategoryController extends AbstractController {
         }
     }
 
+    @Operation(
+            summary = "Get category by ID",
+            description = "Retrieve a single category by its ID with optional summary format"
+    )
     @GetMapping("/{categoryId}")
     @SuppressWarnings("unchecked")
     public ResponseEntity<ApiResponse<?>> getCategoryById(
-            @PathVariable Long categoryId,
+            @Parameter(description = "Category ID", required = true) @PathVariable Long categoryId,
+            @Parameter(description = "Return summary format", example = "false")
             @RequestParam(value = "summary", required = false, defaultValue = "false") boolean summary) {
         Category category = categoryService.getCategoryById(categoryId);
 
@@ -61,10 +76,16 @@ public class CategoryController extends AbstractController {
     }
 
 
+    @Operation(
+            summary = "Create a new category",
+            description = "Create a new category with optional image. Requires SuperAdmin role.",
+            security = @SecurityRequirement(name = "bearer-jwt")
+    )
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('SuperAdmins')")
     public ResponseEntity<ApiResponse<CategoryResponse>> createCategory(
             @Valid @ModelAttribute CategoryRequest categoryRequest,
+            @Parameter(description = "Category image file")
             @RequestParam(value = "image", required = false) MultipartFile image) {
 
         Category createdCategory = categoryService.createCategory(categoryRequest);
@@ -79,11 +100,15 @@ public class CategoryController extends AbstractController {
         return created("Category created successfully", response);
     }
 
-    // JSON endpoint for updating category without image
+    @Operation(
+            summary = "Update category (JSON)",
+            description = "Update category details without image. Requires SuperAdmin role.",
+            security = @SecurityRequirement(name = "bearer-jwt")
+    )
     @PutMapping(value = "/{categoryId}", consumes = MediaType.APPLICATION_JSON_VALUE)
     @PreAuthorize("hasRole('SuperAdmins')")
     public ResponseEntity<ApiResponse<CategoryResponse>> updateCategoryJson(
-            @PathVariable Long categoryId,
+            @Parameter(description = "Category ID", required = true) @PathVariable Long categoryId,
             @Valid @RequestBody CategoryRequest categoryRequest) {
 
         Category updatedCategory = categoryService.updateCategory(categoryId, categoryRequest);
@@ -91,12 +116,17 @@ public class CategoryController extends AbstractController {
         return success("Category updated successfully", response);
     }
 
-    // Multipart endpoint for updating category with optional image
+    @Operation(
+            summary = "Update category with image",
+            description = "Update category details with optional new image. Requires SuperAdmin role.",
+            security = @SecurityRequirement(name = "bearer-jwt")
+    )
     @PutMapping(value = "/{categoryId}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @PreAuthorize("hasRole('SuperAdmins')")
     public ResponseEntity<ApiResponse<CategoryResponse>> updateCategory(
-            @PathVariable Long categoryId,
+            @Parameter(description = "Category ID", required = true) @PathVariable Long categoryId,
             @Valid @ModelAttribute CategoryRequest categoryRequest,
+            @Parameter(description = "New category image file")
             @RequestParam(value = "image", required = false) MultipartFile image) {
 
         Category updatedCategory = categoryService.updateCategory(categoryId, categoryRequest);
@@ -115,9 +145,15 @@ public class CategoryController extends AbstractController {
         return success("Category updated successfully", response);
     }
 
+    @Operation(
+            summary = "Delete a category",
+            description = "Delete a category (soft delete if has products, hard delete otherwise). Requires SuperAdmin role.",
+            security = @SecurityRequirement(name = "bearer-jwt")
+    )
     @DeleteMapping("/{categoryId}")
     @PreAuthorize("hasRole('SuperAdmins')")
-    public ResponseEntity<ApiResponse<Void>> deleteCategory(@PathVariable Long categoryId) {
+    public ResponseEntity<ApiResponse<Void>> deleteCategory(
+            @Parameter(description = "Category ID", required = true) @PathVariable Long categoryId) {
         Category category = categoryService.getCategoryById(categoryId);
 
         // Check if category has relationships with products
@@ -140,10 +176,16 @@ public class CategoryController extends AbstractController {
         return success(message, null);
     }
 
+    @Operation(
+            summary = "Upload category image",
+            description = "Upload or replace the image for an existing category. Requires SuperAdmin role.",
+            security = @SecurityRequirement(name = "bearer-jwt")
+    )
     @PostMapping("/{categoryId}/upload-image")
     @PreAuthorize("hasRole('SuperAdmins')")
     public ResponseEntity<ApiResponse<Map<String, String>>> uploadCategoryImage(
-            @PathVariable Long categoryId,
+            @Parameter(description = "Category ID", required = true) @PathVariable Long categoryId,
+            @Parameter(description = "Category image file", required = true)
             @RequestParam("image") MultipartFile image) {
 
         Category category = categoryService.getCategoryById(categoryId);
@@ -158,9 +200,15 @@ public class CategoryController extends AbstractController {
         return success("Category image uploaded successfully", response);
     }
 
+    @Operation(
+            summary = "Delete category image",
+            description = "Remove the image from a category. Requires SuperAdmin role.",
+            security = @SecurityRequirement(name = "bearer-jwt")
+    )
     @DeleteMapping("/{categoryId}/delete-image")
     @PreAuthorize("hasRole('SuperAdmins')")
-    public ResponseEntity<ApiResponse<Void>> deleteCategoryImage(@PathVariable Long categoryId) {
+    public ResponseEntity<ApiResponse<Void>> deleteCategoryImage(
+            @Parameter(description = "Category ID", required = true) @PathVariable Long categoryId) {
         Category category = categoryService.getCategoryById(categoryId);
         if (category.getImageUrl() != null && !category.getImageUrl().isEmpty()) {
             imageUploadService.deleteCategoryImage(category.getImageUrl());
@@ -169,10 +217,16 @@ public class CategoryController extends AbstractController {
         return success("Category image deleted successfully", null);
     }
 
+    @Operation(
+            summary = "Update category status",
+            description = "Update the active/inactive status of a category. Requires SuperAdmin role.",
+            security = @SecurityRequirement(name = "bearer-jwt")
+    )
     @PatchMapping("/{categoryId}/status")
     @PreAuthorize("hasRole('SuperAdmins')")
     public ResponseEntity<ApiResponse<CategoryResponse>> updateCategoryStatus(
-            @PathVariable Long categoryId,
+            @Parameter(description = "Category ID", required = true) @PathVariable Long categoryId,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(description = "Status object with 'status' field")
             @RequestBody Map<String, String> body) {
 
         String status = body.get("status");

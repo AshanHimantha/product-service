@@ -7,6 +7,7 @@ import com.ashanhimantha.product_service.dto.response.PaginatedResponse;
 import com.ashanhimantha.product_service.dto.response.ProductResponse;
 import com.ashanhimantha.product_service.dto.response.PublicProductResponse;
 import com.ashanhimantha.product_service.service.ProductService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -20,6 +21,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RestController
 @RequestMapping("/api/v1/products")
 @RequiredArgsConstructor
+@Tag(name = "Products", description = "Products management APIs for organizing products")
 public class ProductController extends AbstractController {
 
     private final ProductService productService;
