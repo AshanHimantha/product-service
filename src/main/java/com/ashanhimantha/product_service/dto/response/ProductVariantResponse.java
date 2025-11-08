@@ -5,11 +5,13 @@ import lombok.Data;
 import java.time.Instant;
 
 /**
- * Response DTO for product variant information
+ * DTO for Product Variant responses
  */
 @Data
-public class VariantResponse {
+public class ProductVariantResponse {
     private Long id;
+    private Long productId;
+    private String productName;
     private String color;
     private String size;
     private Double unitCost;
@@ -17,7 +19,8 @@ public class VariantResponse {
     private Integer quantity;
     private String sku;
     private Boolean isActive;
-    private Boolean isInStock;
+    private String variantName;
     private Instant createdAt;
     private Instant updatedAt;
 }
+

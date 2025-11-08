@@ -9,9 +9,8 @@ import lombok.Data;
 @Data
 public class VariantRequest {
 
-    @NotBlank(message = "Color is required")
     @Size(min = 2, max = 50, message = "Color must be between 2 and 50 characters")
-    private String color; // e.g., "Red", "Blue", "Black"
+    private String color; // Optional - can be null for products without color variants
 
     @NotBlank(message = "Size is required")
     @Size(min = 1, max = 10, message = "Size must be between 1 and 10 characters")
@@ -31,13 +30,6 @@ public class VariantRequest {
     @PositiveOrZero(message = "Quantity must be zero or positive")
     private Integer quantity;
 
-    @PositiveOrZero(message = "Reorder level must be zero or positive")
-    private Integer reorderLevel = 10;
-
-    @PositiveOrZero(message = "Reorder quantity must be zero or positive")
-    private Integer reorderQuantity = 50;
-
     @Size(max = 50, message = "SKU cannot exceed 50 characters")
     private String sku; // Optional unique identifier
 }
-

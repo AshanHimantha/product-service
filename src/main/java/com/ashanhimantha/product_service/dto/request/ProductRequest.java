@@ -22,10 +22,17 @@ public class ProductRequest {
     @NotNull(message = "Category ID is required")
     private Long categoryId;
 
+    // Optional colors array - if null/empty, product doesn't have color variants (e.g., on-demand products)
+    private List<String> colors;
+
     // List of variants for products with color/size options
     private List<VariantRequest> variants;
 
     public boolean hasVariants() {
         return variants != null && !variants.isEmpty();
+    }
+
+    public boolean hasColors() {
+        return colors != null && !colors.isEmpty();
     }
 }

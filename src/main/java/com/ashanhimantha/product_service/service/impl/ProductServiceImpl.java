@@ -95,21 +95,18 @@ public class ProductServiceImpl implements ProductService {
         return uploadProductImages(savedProduct.getId(), validFiles);
     }
 
-    /**
-     * Generates a simple Stock Keeping Unit (SKU) for a product variant.
-     * Example: PROD-RED-SML-1234
-     * @param product The parent product.
-     * @param variant The specific variant.
-     * @return A generated SKU string.
-     */
+
     private String generateSKU(Product product, ProductVariant variant) {
         String productName = product.getName().replaceAll("\\s+", "").toUpperCase();
         if (productName.length() > 4) {
             productName = productName.substring(0, 4);
         }
-        String color = variant.getColor().replaceAll("[^a-zA-Z]", "").toUpperCase();
-        if (color.length() > 3) {
-            color = color.substring(0, 3);
+        String color = "NONE";
+        if (variant.getColor() != null && !variant.getColor().isBlank()) {
+            color = variant.getColor().replaceAll("[^a-zA-Z]", "").toUpperCase();
+            if (color.length() > 3) {
+                color = color.substring(0, 3);
+            }
         }
         String size = variant.getSize().toUpperCase();
 
@@ -283,3 +280,4 @@ public class ProductServiceImpl implements ProductService {
         return productMapper.toAdminProductResponse(saved);
     }
 }
+

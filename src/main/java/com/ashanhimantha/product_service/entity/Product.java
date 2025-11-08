@@ -68,7 +68,7 @@ public class Product {
     public Integer getTotalStock() {
         if (hasVariants()) {
             return variants.stream()
-                    .mapToInt(ProductVariant::getQuantity)
+                    .mapToInt(v -> v.getQuantity() != null ? v.getQuantity() : 0)
                     .sum();
         }
         return 0;

@@ -7,6 +7,7 @@ import com.ashanhimantha.product_service.exception.DuplicateResourceException;
 import com.ashanhimantha.product_service.exception.ResourceNotFoundException;
 import com.ashanhimantha.product_service.repository.CategoryRepository;
 import com.ashanhimantha.product_service.repository.CategoryTypeRepository;
+import com.ashanhimantha.product_service.repository.ProductVariantRepository;
 import com.ashanhimantha.product_service.service.CategoryTypeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -21,6 +22,7 @@ public class CategoryTypeServiceImpl implements CategoryTypeService {
 
     private final CategoryTypeRepository categoryTypeRepository;
     private final CategoryRepository categoryRepository;
+    private final ProductVariantRepository productVariantRepository;
 
     @Override
     public CategoryType createCategoryType(CategoryTypeRequest request) {
@@ -66,6 +68,23 @@ public class CategoryTypeServiceImpl implements CategoryTypeService {
 
         // Update the properties of the existing entity
         existingCategoryType.setName(request.getName());
+        // Check if any sizes are being removed that are currently in use by product variants
+        List<String> existingSizes = existingCategoryType.getSizeOptionsAsList();
+        List<String> newSizes = request.getSizeOptions();
+
+        // Find sizes that are being removed (exist in old but not in new)
+        List<String> removedSizes = existingSizes.stream()
+                .filter(size -> !newSizes.contains(size))
+                .toList();
+
+        // If any sizes are being removed, check if they're in use
+        if (!removedSizes.isEmpty()) {
+            if (productVariantRepository.existsByAnySize(removedSizes)) {
+                throw new IllegalStateException("Cannot remove size(s): " + String.join(", ", removedSizes) +
+                        ". One or more product variants are using these sizes.");
+            }
+        }
+
         existingCategoryType.setSizeOptionsFromList(request.getSizeOptions());
         existingCategoryType.setStatus(request.getStatus());
 
