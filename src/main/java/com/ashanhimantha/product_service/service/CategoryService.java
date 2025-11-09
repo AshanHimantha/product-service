@@ -9,8 +9,10 @@ import java.util.List;
 public interface CategoryService {
     Category createCategory(CategoryRequest categoryRequest);
     Category getCategoryById(Long categoryId);
-    Page<Category> getAllCategories(Pageable pageable);
     List<Category> getAllCategoriesAsList();
-    Category updateCategory(Long categoryId, CategoryRequest categoryRequest); // ADD THIS
-    void deleteCategory(Long categoryId); // ADD THIS
+    Category updateCategory(Long categoryId, CategoryRequest categoryRequest);
+    Category updateCategoryStatus(Long categoryId, String status);
+    void deleteCategory(Long categoryId);
+    void updateCategoryImage(Long categoryId, String imageUrl);
+    boolean categoryHasProducts(Long categoryId);
 }

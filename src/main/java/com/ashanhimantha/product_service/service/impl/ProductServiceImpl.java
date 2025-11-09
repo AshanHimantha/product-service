@@ -1,30 +1,30 @@
 package com.ashanhimantha.product_service.service.impl;
 
 import com.ashanhimantha.product_service.dto.request.ProductRequest;
+import com.ashanhimantha.product_service.dto.request.ProductUpdateRequest;
+import com.ashanhimantha.product_service.dto.request.VariantRequest;
 import com.ashanhimantha.product_service.dto.response.AdminProductResponse;
 import com.ashanhimantha.product_service.dto.response.ProductResponse;
+import com.ashanhimantha.product_service.dto.response.PublicProductResponse;
 import com.ashanhimantha.product_service.entity.Category;
 import com.ashanhimantha.product_service.entity.Product;
-import com.ashanhimantha.product_service.entity.enums.ProductStatus;
+import com.ashanhimantha.product_service.entity.ProductVariant;
+import com.ashanhimantha.product_service.entity.enums.Status;
 import com.ashanhimantha.product_service.exception.ResourceNotFoundException;
 import com.ashanhimantha.product_service.mapper.ProductMapper;
 import com.ashanhimantha.product_service.repository.ProductRepository;
 import com.ashanhimantha.product_service.service.CategoryService;
+import com.ashanhimantha.product_service.service.ImageUploadService;
 import com.ashanhimantha.product_service.service.ProductService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
-import software.amazon.awssdk.core.sync.RequestBody;
-import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
-import java.io.IOException;
 import java.util.List;
-import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -33,31 +33,27 @@ public class ProductServiceImpl implements ProductService {
     private final ProductRepository productRepository;
     private final CategoryService categoryService;
     private final ProductMapper productMapper;
-    private final S3Client s3Client;
-
-    @Value("${aws.s3.bucket}")
-    private String bucket;
-
-    @Value("${aws.region:ap-southeast-2}")
-    private String awsRegion;
+    private final ImageUploadService imageUploadService;
 
     private static final int MAX_IMAGES = 6;
+    private static final String PRODUCT_FOLDER = "products/";
 
     @Override
     @Transactional
     public AdminProductResponse createProduct(ProductRequest productRequest, List<MultipartFile> files) {
-        // Validate that at least 1 image is provided
-        if (files == null || files.isEmpty()) {
-            throw new IllegalArgumentException("At least 1 image is required when creating a product");
-        }
+        // Validate product request
+        validateProductRequest(productRequest);
 
-        // Validate maximum images limit
-        int imageCount = (int) files.stream().filter(f -> f != null && !f.isEmpty()).count();
-        if (imageCount == 0) {
+        // Filter out empty/null files before counting
+        List<MultipartFile> validFiles = files != null ?
+                files.stream().filter(f -> f != null && !f.isEmpty()).collect(Collectors.toList())
+                : List.of();
+
+        if (validFiles.isEmpty()) {
             throw new IllegalArgumentException("At least 1 valid image is required when creating a product");
         }
-        if (imageCount > MAX_IMAGES) {
-            throw new IllegalArgumentException("Cannot add " + imageCount + " images. Maximum allowed is " + MAX_IMAGES + " images.");
+        if (validFiles.size() > MAX_IMAGES) {
+            throw new IllegalArgumentException("Cannot add " + validFiles.size() + " images. Maximum allowed is " + MAX_IMAGES + " images.");
         }
 
         // 1. Find the category by the ID from the request
@@ -67,37 +63,67 @@ public class ProductServiceImpl implements ProductService {
         Product product = productMapper.toProduct(productRequest);
 
         // 3. Set the fields that are not in the DTO
-        product.setStatus(ProductStatus.ACTIVE);
+        product.setStatus(Status.ACTIVE);
         product.setCategory(category);
 
-        // 4. Save the new product
+        // 4. Save the product FIRST to get an ID (without variants yet)
         Product savedProduct = productRepository.save(product);
 
-        // 5. Upload images and return the response
-        return uploadProductImages(savedProduct.getId(), files);
+        // 5. If product has variants (colors/sizes), create them and link to saved product
+        if (productRequest.hasVariants()) {
+            for (VariantRequest variantRequest : productRequest.getVariants()) {
+                ProductVariant variant = productMapper.toProductVariant(variantRequest);
+                variant.setProduct(savedProduct); // Link variant to the product
+
+                // Generate SKU if not provided
+                if (variant.getSku() == null || variant.getSku().isBlank()) {
+                    variant.setSku(generateSKU(savedProduct, variant));
+                }
+                savedProduct.getVariants().add(variant);
+            }
+            // Save again to persist variants
+            savedProduct = productRepository.save(savedProduct);
+        }
+
+        // 6. Upload images and return the response
+        return uploadProductImages(savedProduct.getId(), validFiles);
+    }
+
+
+    private String generateSKU(Product product, ProductVariant variant) {
+        String productName = product.getName().replaceAll("\\s+", "").toUpperCase();
+        if (productName.length() > 4) {
+            productName = productName.substring(0, 4);
+        }
+        String color = "NONE";
+        if (variant.getColor() != null && !variant.getColor().isBlank()) {
+            color = variant.getColor().replaceAll("[^a-zA-Z]", "").toUpperCase();
+            if (color.length() > 3) {
+                color = color.substring(0, 3);
+            }
+        }
+        String size = variant.getSize().toUpperCase();
+
+        // Use a timestamp component to reduce collisions
+        return String.format("%s-%s-%s-%d", productName, color, size, System.currentTimeMillis() % 10000);
     }
 
 
     @Override
     @Transactional(readOnly = true)
     public Page<ProductResponse> getAllActiveProducts(Pageable pageable) {
-        Page<Product> productPage = productRepository.findByStatus(ProductStatus.ACTIVE, pageable);
+        Page<Product> productPage = productRepository.findByStatus(Status.ACTIVE, pageable);
         return productPage.map(productMapper::toProductResponse);
     }
 
-    /**
-     * NEWLY ADDED METHOD IMPLEMENTATION
-     */
     @Override
     @Transactional(readOnly = true)
     public Page<ProductResponse> getProductsByStatus(Pageable pageable, String status) {
         try {
-            // Convert the status string to the ProductStatus enum
-            ProductStatus productStatus = ProductStatus.valueOf(status.toUpperCase());
+            Status productStatus = Status.valueOf(status.toUpperCase());
             Page<Product> productPage = productRepository.findByStatus(productStatus, pageable);
             return productPage.map(productMapper::toProductResponse);
         } catch (IllegalArgumentException e) {
-            // Handle cases where the status string is not a valid enum constant
             throw new IllegalArgumentException("Invalid product status: " + status);
         }
     }
@@ -106,45 +132,61 @@ public class ProductServiceImpl implements ProductService {
     @Transactional(readOnly = true)
     public ProductResponse getActiveProductById(Long productId) {
         Product product = productRepository.findById(productId)
-                .filter(p -> p.getStatus() == ProductStatus.ACTIVE)
+                .filter(p -> p.getStatus() == Status.ACTIVE)
                 .orElseThrow(() -> new ResourceNotFoundException("Active product not found with id: " + productId));
 
         return productMapper.toProductResponse(product);
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public Page<PublicProductResponse> getAllActiveProductsForPublic(Pageable pageable) {
+        Page<Product> productPage = productRepository.findByStatus(Status.ACTIVE, pageable);
+        return productPage.map(productMapper::toPublicProductResponse);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PublicProductResponse getActiveProductByIdForPublic(Long productId) {
+        Product product = productRepository.findById(productId)
+                .filter(p -> p.getStatus() == Status.ACTIVE)
+                .orElseThrow(() -> new ResourceNotFoundException("Active product not found with id: " + productId));
+
+        return productMapper.toPublicProductResponse(product);
+    }
+
+    @Override
     @Transactional
-    public ProductResponse updateProduct(Long productId, ProductRequest productRequest, List<MultipartFile> files) {
+    public ProductResponse updateProduct(Long productId, ProductUpdateRequest productUpdateRequest, List<MultipartFile> files) {
         Product existingProduct = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + productId));
 
-        Category newCategory = categoryService.getCategoryById(productRequest.getCategoryId());
-
-        // Update fields
-        existingProduct.setName(productRequest.getName());
-        existingProduct.setDescription(productRequest.getDescription());
-        existingProduct.setUnitCost(productRequest.getUnitCost());
-        existingProduct.setSellingPrice(productRequest.getSellingPrice());
-        existingProduct.setCategory(newCategory);
+        // Only update allowed fields: name, description, status
+        existingProduct.setName(productUpdateRequest.getName());
+        existingProduct.setDescription(productUpdateRequest.getDescription());
+        if (productUpdateRequest.getStatus() != null) {
+            existingProduct.setStatus(productUpdateRequest.getStatus());
+        }
 
         Product updatedProduct = productRepository.save(existingProduct);
 
-        // If files provided, upload them which will persist changes and attach image URLs
+        // If files provided, upload them
         if (files != null && !files.isEmpty()) {
-            // Check if adding new images exceeds the limit
-            int currentImageCount = existingProduct.getImageUrls().size();
-            int newImageCount = files.size();
-            if (currentImageCount + newImageCount > MAX_IMAGES) {
-                throw new IllegalArgumentException(
-                        "Cannot add " + newImageCount + " images. Product already has " +
-                                currentImageCount + " images. Maximum allowed is " + MAX_IMAGES + " images.");
-            }
+            List<MultipartFile> validFiles = files.stream().filter(f -> f != null && !f.isEmpty()).collect(Collectors.toList());
+            if (!validFiles.isEmpty()) {
+                int currentImageCount = existingProduct.getImageUrls().size();
+                int newImageCount = validFiles.size();
+                if (currentImageCount + newImageCount > MAX_IMAGES) {
+                    throw new IllegalArgumentException(
+                            "Cannot add " + newImageCount + " images. Product already has " +
+                                    currentImageCount + " images. Maximum allowed is " + MAX_IMAGES + " images.");
+                }
 
-            uploadProductImages(productId, files);
-            // Reload the product to include newly added image URLs
-            Product reloaded = productRepository.findById(productId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + productId));
-            return productMapper.toProductResponse(reloaded);
+                uploadProductImages(productId, validFiles);
+                Product reloaded = productRepository.findById(productId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + productId));
+                return productMapper.toProductResponse(reloaded);
+            }
         }
 
         return productMapper.toProductResponse(updatedProduct);
@@ -176,7 +218,7 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
-    public AdminProductResponse updateProductStatusForAdmin(Long productId, ProductStatus newStatus) {
+    public AdminProductResponse updateProductStatusForAdmin(Long productId, Status newStatus) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + productId));
 
@@ -192,12 +234,16 @@ public class ProductServiceImpl implements ProductService {
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + productId));
 
         if (files == null || files.isEmpty()) {
-            throw new IllegalArgumentException("At least one file is required");
+            throw new IllegalArgumentException("At least one file is required for upload");
         }
 
-        // Validate maximum images limit
+        List<MultipartFile> validFiles = files.stream().filter(f -> f != null && !f.isEmpty()).collect(Collectors.toList());
+        if (validFiles.isEmpty()) {
+            throw new IllegalArgumentException("No valid files provided for upload");
+        }
+
         int currentImageCount = product.getImageUrls().size();
-        int newImageCount = (int) files.stream().filter(f -> f != null && !f.isEmpty()).count();
+        int newImageCount = validFiles.size();
 
         if (currentImageCount + newImageCount > MAX_IMAGES) {
             throw new IllegalArgumentException(
@@ -205,38 +251,41 @@ public class ProductServiceImpl implements ProductService {
                             currentImageCount + " images. Maximum allowed is " + MAX_IMAGES + " images.");
         }
 
-        try {
-            return processUploadProductImages(product, files);
-        } catch (IOException e) {
-            throw new RuntimeException("Failed to upload file(s) to S3", e);
-        }
-    }
+        // Use centralized ImageUploadService
+        List<String> uploadedUrls = imageUploadService.uploadImages(
+                validFiles,
+                PRODUCT_FOLDER + productId + "/",
+                "product"
+        );
 
-    private AdminProductResponse processUploadProductImages(Product product, List<MultipartFile> files) throws IOException {
-        for (MultipartFile file : files) {
-            if (file == null || file.isEmpty()) continue;
-
-            String originalFilename = file.getOriginalFilename();
-            String ext = "";
-            if (originalFilename != null && originalFilename.contains(".")) {
-                ext = originalFilename.substring(originalFilename.lastIndexOf('.'));
-            }
-
-            String key = String.format("products/%d/%s%s", product.getId(), UUID.randomUUID(), ext);
-
-            PutObjectRequest putReq = PutObjectRequest.builder()
-                    .bucket(bucket)
-                    .key(key)
-                    .contentType(file.getContentType())
-                    .build();
-
-            s3Client.putObject(putReq, RequestBody.fromBytes(file.getBytes()));
-
-            String url = String.format("https://%s.s3.%s.amazonaws.com/%s", bucket, awsRegion, key);
-            product.getImageUrls().add(url);
-        }
-
+        product.getImageUrls().addAll(uploadedUrls);
         Product saved = productRepository.save(product);
         return productMapper.toAdminProductResponse(saved);
+    }
+
+    private void validateProductRequest(ProductRequest request) {
+        // All products must have variants
+        if (!request.hasVariants() || request.getVariants().isEmpty()) {
+            throw new IllegalArgumentException("Products must have at least one variant");
+        }
+
+        // Validate each variant
+        for (VariantRequest variant : request.getVariants()) {
+            if (variant.getUnitCost() == null) {
+                throw new IllegalArgumentException("Unit cost is required for all variants");
+            }
+            if (variant.getSellingPrice() == null) {
+                throw new IllegalArgumentException("Selling price is required for all variants");
+            }
+            if (variant.getSellingPrice() < variant.getUnitCost()) {
+                throw new IllegalArgumentException(
+                    String.format("Selling price should not be less than unit cost for variant %s-%s",
+                        variant.getColor(), variant.getSize())
+                );
+            }
+            if (variant.getQuantity() != null && variant.getQuantity() < 0) {
+                throw new IllegalArgumentException("Quantity cannot be negative for variants");
+            }
+        }
     }
 }

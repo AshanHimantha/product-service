@@ -1,7 +1,8 @@
 package com.ashanhimantha.product_service.entity;
 
 
-import com.ashanhimantha.product_service.entity.enums.ProductStatus;
+import com.ashanhimantha.product_service.entity.enums.ProductType;
+import com.ashanhimantha.product_service.entity.enums.Status;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
@@ -26,18 +27,21 @@ public class Product {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Column(nullable = false)
-    private Double unitCost; // The price the business paid for one unit of the product.
 
-    @Column(nullable = false)
-    private Double sellingPrice; // The price the product is sold to the customer for.
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private ProductStatus status;
+    private ProductType productType = ProductType.STOCK; // Default to STOCK type
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Status status;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "category_id")
     private Category category;
+
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    private java.util.List<ProductVariant> variants = new java.util.ArrayList<>(); // For products with color/size variants
 
     @ElementCollection
     @CollectionTable(name = "product_images", joinColumns = @JoinColumn(name = "product_id"))
@@ -50,4 +54,23 @@ public class Product {
 
     @UpdateTimestamp
     private Instant updatedAt;
+
+    /**
+     * Check if product has variants
+     */
+    public boolean hasVariants() {
+        return variants != null && !variants.isEmpty();
+    }
+
+    /**
+     * Get total stock across all variants
+     */
+    public Integer getTotalStock() {
+        if (hasVariants()) {
+            return variants.stream()
+                    .mapToInt(v -> v.getQuantity() != null ? v.getQuantity() : 0)
+                    .sum();
+        }
+        return 0;
+    }
 }

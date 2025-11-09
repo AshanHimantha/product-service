@@ -31,19 +31,34 @@ public class SecurityConfig {
     @Order(1)
     public SecurityFilterChain publicSecurityFilterChain(HttpSecurity http) throws Exception {
         // First filter chain for public GET endpoints only - NO JWT validation
-        http
-                .securityMatcher(request -> {
+        http.securityMatcher(request -> {
                     String path = request.getServletPath();
                     String method = request.getMethod();
+
+                    // Allow Swagger/OpenAPI endpoints
+                    if (path.startsWith("/swagger-ui") ||
+                        path.startsWith("/v3/api-docs") ||
+                        path.startsWith("/api-docs") ||
+                        path.equals("/swagger-ui.html")) {
+                        return true;
+                    }
+
                     return "GET".equals(method) &&
                            !path.contains("/admin") && // Exclude any admin endpoints
-                           (path.startsWith("/api/v1/categories") || path.startsWith("/api/v1/products"));
+                           (path.startsWith("/api/v1/categories") ||
+                            path.startsWith("/api/v1/products") ||
+                            path.startsWith("/api/v1/category-types"));
                 })
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
+                        // Swagger UI and OpenAPI endpoints
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/api-docs/**", "/swagger-ui.html").permitAll()
+                        // Public GET endpoints
                         .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/actuator").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/products/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/category-types/**").permitAll()
                         .anyRequest().denyAll() // This should never be reached due to securityMatcher
                 );
         // No OAuth2 configuration here - completely bypasses JWT validation
@@ -66,10 +81,7 @@ public class SecurityConfig {
         return http.build();
     }
 
-    /**
-     * This bean defines the converter that reads the JWT and extracts authorities.
-     * It combines the standard authorities converter with our custom group converter.
-     */
+
     @Bean
     public JwtAuthenticationConverter jwtAuthenticationConverter() {
         JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
