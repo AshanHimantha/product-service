@@ -19,7 +19,7 @@ public class CategoryTypeRequest {
     @NotEmpty(message = "Size options are required")
     private List<String> sizeOptions; // e.g., ["S", "M", "L", "XL"] or ["28", "30", "32"]
 
-    @NotNull(message = "Status is required")
+
     private Status status;
 
 }
