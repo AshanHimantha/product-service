@@ -2,6 +2,7 @@ package com.ashanhimantha.product_service.service.impl;
 
 import com.ashanhimantha.product_service.dto.request.StockUpdateRequest;
 import com.ashanhimantha.product_service.dto.request.VariantRequest;
+import com.ashanhimantha.product_service.dto.request.VariantUpdateRequest;
 import com.ashanhimantha.product_service.dto.response.ProductVariantResponse;
 import com.ashanhimantha.product_service.entity.Product;
 import com.ashanhimantha.product_service.entity.ProductVariant;
@@ -41,58 +42,57 @@ public class ProductVariantServiceImpl implements ProductVariantService {
                 .collect(Collectors.toList());
     }
 
-    @Override
-    @Transactional
-    public ProductVariantResponse updateVariantStock(Long variantId, StockUpdateRequest request) {
-        ProductVariant variant = productVariantRepository.findById(variantId)
-                .orElseThrow(() -> new ResourceNotFoundException("Product variant not found with id: " + variantId));
 
-        Integer oldQuantity = variant.getQuantity();
-        variant.setQuantity(request.getQuantity());
 
-        ProductVariant updated = productVariantRepository.save(variant);
 
-        log.info("Stock updated for variant ID {}: {} -> {}. Reason: {}",
-                variantId, oldQuantity, request.getQuantity(),
-                request.getReason() != null ? request.getReason() : "Not specified");
-
-        return mapToResponse(updated);
-    }
 
     @Override
     @Transactional
-    public ProductVariantResponse updateVariantStatus(Long variantId, Boolean isActive) {
+    public ProductVariantResponse updateVariant(Long variantId, VariantUpdateRequest request) {
         ProductVariant variant = productVariantRepository.findById(variantId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product variant not found with id: " + variantId));
 
-        variant.setIsActive(isActive);
-        ProductVariant updated = productVariantRepository.save(variant);
+        boolean updated = false;
+        StringBuilder updateLog = new StringBuilder("Updated fields for variant ID " + variantId + ": ");
 
-        log.info("Status updated for variant ID {}: {}", variantId, isActive ? "ACTIVE" : "INACTIVE");
-
-        return mapToResponse(updated);
-    }
-
-    @Override
-    @Transactional
-    public ProductVariantResponse updateVariantPricing(Long variantId, Double unitCost, Double sellingPrice) {
-        ProductVariant variant = productVariantRepository.findById(variantId)
-                .orElseThrow(() -> new ResourceNotFoundException("Product variant not found with id: " + variantId));
-
-        if (unitCost != null && unitCost >= 0) {
-            variant.setUnitCost(unitCost);
+        // Update quantity if provided
+        if (request.getQuantity() != null) {
+            Integer oldQuantity = variant.getQuantity();
+            variant.setQuantity(request.getQuantity());
+            updateLog.append(String.format("quantity(%d->%d) ", oldQuantity, request.getQuantity()));
+            updated = true;
         }
 
-        if (sellingPrice != null && sellingPrice > 0) {
-            variant.setSellingPrice(sellingPrice);
+        // Update unit cost if provided
+        if (request.getUnitCost() != null) {
+            variant.setUnitCost(request.getUnitCost());
+            updateLog.append(String.format("unitCost(%.2f) ", request.getUnitCost()));
+            updated = true;
         }
 
-        ProductVariant updated = productVariantRepository.save(variant);
+        // Update selling price if provided
+        if (request.getSellingPrice() != null) {
+            variant.setSellingPrice(request.getSellingPrice());
+            updateLog.append(String.format("sellingPrice(%.2f) ", request.getSellingPrice()));
+            updated = true;
+        }
 
-        log.info("Pricing updated for variant ID {}: Cost={}, Price={}",
-                variantId, unitCost, sellingPrice);
+        // Update status if provided
+        if (request.getIsActive() != null) {
+            variant.setIsActive(request.getIsActive());
+            updateLog.append(String.format("status(%s) ", request.getIsActive() ? "ACTIVE" : "INACTIVE"));
+            updated = true;
+        }
 
-        return mapToResponse(updated);
+        if (!updated) {
+            throw new IllegalArgumentException("At least one field must be provided for update");
+        }
+
+        ProductVariant savedVariant = productVariantRepository.save(variant);
+
+        log.info(updateLog.toString());
+
+        return mapToResponse(savedVariant);
     }
 
     @Override
@@ -144,3 +144,4 @@ public class ProductVariantServiceImpl implements ProductVariantService {
         return response;
     }
 }
+

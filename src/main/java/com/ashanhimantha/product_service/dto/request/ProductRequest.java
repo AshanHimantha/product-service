@@ -1,6 +1,7 @@
 package com.ashanhimantha.product_service.dto.request;
 
 import com.ashanhimantha.product_service.entity.enums.ProductType;
+import com.ashanhimantha.product_service.entity.enums.Status;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.*;
 import lombok.Data;
@@ -32,6 +33,9 @@ public class ProductRequest {
 
     @Schema(description = "Product variants with sizes and pricing information")
     private List<VariantRequest> variants;
+
+    @Schema(description = "Product status (ACTIVE, INACTIVE)", example = "ACTIVE")
+    private Status status;
 
     public boolean hasVariants() {
         return variants != null && !variants.isEmpty();

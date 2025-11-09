@@ -2,31 +2,16 @@ package com.ashanhimantha.product_service.mapper;
 
 import com.ashanhimantha.product_service.dto.response.CategoryTypeResponse;
 import com.ashanhimantha.product_service.entity.CategoryType;
-import org.springframework.stereotype.Component;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
-@Component
-public class CategoryTypeMapper {
+@Mapper(componentModel = "spring")
+public interface CategoryTypeMapper {
 
-    public CategoryTypeResponse toResponse(CategoryType categoryType) {
-        if (categoryType == null) {
-            return null;
-        }
+    @Mapping(target = "sizeOptions", expression = "java(categoryType.getSizeOptionsAsList())")
+    CategoryTypeResponse toResponse(CategoryType categoryType);
 
-        CategoryTypeResponse response = new CategoryTypeResponse();
-        response.setId(categoryType.getId());
-        response.setName(categoryType.getName());
-        response.setSizeOptions(categoryType.getSizeOptionsAsList());
-        response.setStatus(categoryType.getStatus());
-
-        return response;
-    }
-
-    public List<CategoryTypeResponse> toResponseList(List<CategoryType> categoryTypes) {
-        return categoryTypes.stream()
-                .map(this::toResponse)
-                .collect(Collectors.toList());
-    }
+    List<CategoryTypeResponse> toResponseList(List<CategoryType> categoryTypes);
 }

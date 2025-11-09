@@ -1,6 +1,7 @@
 package com.ashanhimantha.product_service.service;
 
 import com.ashanhimantha.product_service.dto.request.ProductRequest;
+import com.ashanhimantha.product_service.dto.request.ProductUpdateRequest;
 import com.ashanhimantha.product_service.dto.response.AdminProductResponse;
 import com.ashanhimantha.product_service.dto.response.ProductResponse;
 import com.ashanhimantha.product_service.dto.response.PublicProductResponse;
@@ -14,7 +15,7 @@ import java.util.List;
 public interface ProductService {
 
     AdminProductResponse createProduct(ProductRequest productRequest, List<MultipartFile> files);
-    ProductResponse updateProduct(Long productId, ProductRequest productRequest, List<MultipartFile> files);
+    ProductResponse updateProduct(Long productId, ProductUpdateRequest productUpdateRequest, List<MultipartFile> files);
     void deleteProduct(Long productId);
     Page<ProductResponse> getAllActiveProducts(Pageable pageable);
     ProductResponse getActiveProductById(Long productId);

@@ -59,10 +59,7 @@ public class CategoryServiceImpl implements CategoryService {
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found with id: " + categoryId));
     }
 
-    @Override
-    public Page<Category> getAllCategories(Pageable pageable) {
-        return categoryRepository.findAll(pageable);
-    }
+
 
     @Override
     public List<Category> getAllCategoriesAsList() {

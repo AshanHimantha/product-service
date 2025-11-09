@@ -1,6 +1,7 @@
 package com.ashanhimantha.product_service.service.impl;
 
 import com.ashanhimantha.product_service.dto.request.ProductRequest;
+import com.ashanhimantha.product_service.dto.request.ProductUpdateRequest;
 import com.ashanhimantha.product_service.dto.request.VariantRequest;
 import com.ashanhimantha.product_service.dto.response.AdminProductResponse;
 import com.ashanhimantha.product_service.dto.response.ProductResponse;
@@ -15,8 +16,6 @@ import com.ashanhimantha.product_service.repository.ProductRepository;
 import com.ashanhimantha.product_service.service.CategoryService;
 import com.ashanhimantha.product_service.service.ImageUploadService;
 import com.ashanhimantha.product_service.service.ProductService;
-import com.ashanhimantha.product_service.service.strategy.ProductPricingStrategy;
-import com.ashanhimantha.product_service.service.strategy.ProductPricingStrategyFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -35,7 +34,6 @@ public class ProductServiceImpl implements ProductService {
     private final CategoryService categoryService;
     private final ProductMapper productMapper;
     private final ImageUploadService imageUploadService;
-    private final ProductPricingStrategyFactory strategyFactory;
 
     private static final int MAX_IMAGES = 6;
     private static final String PRODUCT_FOLDER = "products/";
@@ -43,9 +41,8 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional
     public AdminProductResponse createProduct(ProductRequest productRequest, List<MultipartFile> files) {
-        // Validate using the appropriate strategy
-        ProductPricingStrategy strategy = strategyFactory.getStrategy(productRequest.getProductType());
-        strategy.validateProductRequest(productRequest);
+        // Validate product request
+        validateProductRequest(productRequest);
 
         // Filter out empty/null files before counting
         List<MultipartFile> validFiles = files != null ?
@@ -69,13 +66,10 @@ public class ProductServiceImpl implements ProductService {
         product.setStatus(Status.ACTIVE);
         product.setCategory(category);
 
-        // 4. Apply pricing strategy based on product type
-        strategy.applyPricing(product, productRequest);
-
-        // 5. Save the product FIRST to get an ID (without variants yet)
+        // 4. Save the product FIRST to get an ID (without variants yet)
         Product savedProduct = productRepository.save(product);
 
-        // 6. If product has variants (colors/sizes), create them and link to saved product
+        // 5. If product has variants (colors/sizes), create them and link to saved product
         if (productRequest.hasVariants()) {
             for (VariantRequest variantRequest : productRequest.getVariants()) {
                 ProductVariant variant = productMapper.toProductVariant(variantRequest);
@@ -91,7 +85,7 @@ public class ProductServiceImpl implements ProductService {
             savedProduct = productRepository.save(savedProduct);
         }
 
-        // 7. Upload images and return the response
+        // 6. Upload images and return the response
         return uploadProductImages(savedProduct.getId(), validFiles);
     }
 
@@ -163,27 +157,16 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional
-    public ProductResponse updateProduct(Long productId, ProductRequest productRequest, List<MultipartFile> files) {
+    public ProductResponse updateProduct(Long productId, ProductUpdateRequest productUpdateRequest, List<MultipartFile> files) {
         Product existingProduct = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + productId));
 
-        // Validate using the appropriate strategy
-        ProductPricingStrategy strategy = strategyFactory.getStrategy(productRequest.getProductType());
-        strategy.validateProductRequest(productRequest);
-
-        Category newCategory = categoryService.getCategoryById(productRequest.getCategoryId());
-
-        // Update fields
-        existingProduct.setName(productRequest.getName());
-        existingProduct.setDescription(productRequest.getDescription());
-        existingProduct.setProductType(productRequest.getProductType());
-        existingProduct.setCategory(newCategory);
-
-        // Apply pricing strategy based on product type
-        strategy.applyPricing(existingProduct, productRequest);
-
-        // Note: This update method does not handle updating/adding/removing variants.
-        // A more complex implementation would be needed for that.
+        // Only update allowed fields: name, description, status
+        existingProduct.setName(productUpdateRequest.getName());
+        existingProduct.setDescription(productUpdateRequest.getDescription());
+        if (productUpdateRequest.getStatus() != null) {
+            existingProduct.setStatus(productUpdateRequest.getStatus());
+        }
 
         Product updatedProduct = productRepository.save(existingProduct);
 
@@ -279,5 +262,30 @@ public class ProductServiceImpl implements ProductService {
         Product saved = productRepository.save(product);
         return productMapper.toAdminProductResponse(saved);
     }
-}
 
+    private void validateProductRequest(ProductRequest request) {
+        // All products must have variants
+        if (!request.hasVariants() || request.getVariants().isEmpty()) {
+            throw new IllegalArgumentException("Products must have at least one variant");
+        }
+
+        // Validate each variant
+        for (VariantRequest variant : request.getVariants()) {
+            if (variant.getUnitCost() == null) {
+                throw new IllegalArgumentException("Unit cost is required for all variants");
+            }
+            if (variant.getSellingPrice() == null) {
+                throw new IllegalArgumentException("Selling price is required for all variants");
+            }
+            if (variant.getSellingPrice() < variant.getUnitCost()) {
+                throw new IllegalArgumentException(
+                    String.format("Selling price should not be less than unit cost for variant %s-%s",
+                        variant.getColor(), variant.getSize())
+                );
+            }
+            if (variant.getQuantity() != null && variant.getQuantity() < 0) {
+                throw new IllegalArgumentException("Quantity cannot be negative for variants");
+            }
+        }
+    }
+}

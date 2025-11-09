@@ -11,10 +11,6 @@ import java.util.List;
 @Repository
 public interface ProductVariantRepository extends JpaRepository<ProductVariant, Long> {
     List<ProductVariant> findByProductId(Long productId);
-
-    /**
-     * Check if any product variants exist with any of the given sizes
-     */
     @Query("SELECT CASE WHEN COUNT(pv) > 0 THEN true ELSE false END FROM ProductVariant pv WHERE pv.size IN :sizes")
     boolean existsByAnySize(@Param("sizes") List<String> sizes);
 }

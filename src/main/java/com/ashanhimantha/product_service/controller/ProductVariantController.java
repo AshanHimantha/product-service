@@ -1,7 +1,7 @@
 package com.ashanhimantha.product_service.controller;
 
-import com.ashanhimantha.product_service.dto.request.StockUpdateRequest;
 import com.ashanhimantha.product_service.dto.request.VariantRequest;
+import com.ashanhimantha.product_service.dto.request.VariantUpdateRequest;
 import com.ashanhimantha.product_service.dto.response.ApiResponse;
 import com.ashanhimantha.product_service.dto.response.ProductVariantResponse;
 import com.ashanhimantha.product_service.service.ProductVariantService;
@@ -77,63 +77,26 @@ public class ProductVariantController extends AbstractController {
     }
 
     /**
-     * Update stock quantity for a specific variant
-     * Example: PATCH /api/v1/product-variants/123/stock
-     * Body: { "quantity": 50, "reason": "RESTOCKED" }
+     * Flexible update endpoint - Update any combination of variant fields
+     * Example: PATCH /api/v1/product-variants/123
+     * Body examples:
+     * - Update only status: { "isActive": false }
+     * - Update only quantity: { "quantity": 100 }
+     * - Update only unit cost: { "unitCost": 15.50 }
+     * - Update pricing: { "unitCost": 15.50, "sellingPrice": 29.99 }
+     * - Update everything: { "quantity": 100, "unitCost": 15.50, "sellingPrice": 29.99, "isActive": true }
      */
     @Operation(
-            summary = "Update variant stock",
-            description = "Update the stock quantity for a specific variant. Requires SuperAdmin role.",
+            summary = "Update variant (flexible)",
+            description = "Update any combination of variant fields (quantity, unitCost, sellingPrice, status). Only the provided fields will be updated. At least one field must be provided. Requires SuperAdmin role.",
             security = @SecurityRequirement(name = "bearer-jwt")
     )
-    @PatchMapping("/{variantId}/stock")
+    @PatchMapping("/{variantId}")
     @PreAuthorize("hasRole('SuperAdmins')")
-    public ResponseEntity<ApiResponse<ProductVariantResponse>> updateVariantStock(
+    public ResponseEntity<ApiResponse<ProductVariantResponse>> updateVariant(
             @Parameter(description = "Variant ID", required = true) @PathVariable Long variantId,
-            @Valid @RequestBody StockUpdateRequest request) {
-        ProductVariantResponse updated = productVariantService.updateVariantStock(variantId, request);
-        return success("Stock quantity updated successfully", updated);
-    }
-
-    /**
-     * Update variant active status
-     * Example: PATCH /api/v1/product-variants/123/status?isActive=false
-     */
-    @Operation(
-            summary = "Update variant status",
-            description = "Update the active/inactive status of a variant. Requires SuperAdmin role.",
-            security = @SecurityRequirement(name = "bearer-jwt")
-    )
-    @PatchMapping("/{variantId}/status")
-    @PreAuthorize("hasRole('SuperAdmins')")
-    public ResponseEntity<ApiResponse<ProductVariantResponse>> updateVariantStatus(
-            @Parameter(description = "Variant ID", required = true) @PathVariable Long variantId,
-            @Parameter(description = "Active status", required = true) @RequestParam Boolean isActive) {
-        ProductVariantResponse updated = productVariantService.updateVariantStatus(variantId, isActive);
-        return success("Variant status updated successfully", updated);
-    }
-
-    /**
-     * Update variant pricing (unit cost and/or selling price)
-     * Example: PATCH /api/v1/product-variants/123/pricing?unitCost=15.50&sellingPrice=29.99
-     */
-    @Operation(
-            summary = "Update variant pricing",
-            description = "Update the unit cost and/or selling price for a variant. Requires SuperAdmin role.",
-            security = @SecurityRequirement(name = "bearer-jwt")
-    )
-    @PatchMapping("/{variantId}/pricing")
-    @PreAuthorize("hasRole('SuperAdmins')")
-    public ResponseEntity<ApiResponse<ProductVariantResponse>> updateVariantPricing(
-            @Parameter(description = "Variant ID", required = true) @PathVariable Long variantId,
-            @Parameter(description = "Unit cost", example = "15.50") @RequestParam(required = false) Double unitCost,
-            @Parameter(description = "Selling price", example = "29.99") @RequestParam(required = false) Double sellingPrice) {
-
-        if (unitCost == null && sellingPrice == null) {
-            throw new IllegalArgumentException("At least one pricing field (unitCost or sellingPrice) must be provided");
-        }
-
-        ProductVariantResponse updated = productVariantService.updateVariantPricing(variantId, unitCost, sellingPrice);
-        return success("Variant pricing updated successfully", updated);
+            @Valid @RequestBody VariantUpdateRequest request) {
+        ProductVariantResponse updated = productVariantService.updateVariant(variantId, request);
+        return success("Variant updated successfully", updated);
     }
 }
