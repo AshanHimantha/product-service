@@ -13,7 +13,7 @@
 	<artifactId>product-service</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>product-service</name>
-	<description>Product Microservice for Harvest Hub</description>
+	<description>Product Microservice </description>
 	<properties>
 		<!-- Define versions in properties for easy management -->
 		<java.version>17</java.version>

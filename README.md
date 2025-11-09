@@ -2,7 +2,7 @@
 
 [![Java](https://img.shields.io/badge/Java-17-orange.svg?logo=openjdk)](https://openjdk.java.net/) [![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.2.5-6DB33F.svg?logo=spring)](https://spring.io/projects/spring-boot) [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791.svg?logo=postgresql)](https://www.postgresql.org/) [![Maven](https://img.shields.io/badge/Maven-3.8+-C71A36.svg?logo=apache-maven)](https://maven.apache.org/) [![Packaging](https://img.shields.io/badge/Packaging-JAR-blue.svg)](https://maven.apache.org/plugins/maven-jar-plugin/) [![Swagger](https://img.shields.io/badge/API_Docs-Swagger-85EA2D.svg?logo=swagger)](http://localhost:8082/swagger-ui.html)
 
-This repository contains the source code for the Product Service, a core backend microservice for the **Harvest Hub** eCommerce platform.
+This repository contains the source code for the Product Service, a core backend microservice for the eCommerce platform.
 
 ## 1. Overview
 
@@ -246,4 +246,4 @@ This project is licensed under the Apache License 2.0 - see the LICENSE file for
 
 ---
 
-**Note:** This service is part of the Harvest Hub microservices ecosystem. Ensure all dependent services (Authentication, Order Service, etc.) are properly configured for full functionality.
+**Note:** This service is part of the ecommerce microservices ecosystem. Ensure all dependent services (Authentication, Order Service, etc.) are properly configured for full functionality.

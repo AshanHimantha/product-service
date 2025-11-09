@@ -26,7 +26,7 @@ public class OpenApiConfig {
         return new OpenAPI()
                 .info(new Info()
                         .title("Product Service API")
-                        .description("RESTful API for Product Microservice - Harvest Hub E-commerce Platform")
+                        .description("RESTful API for Product Microservice - E-commerce Platform")
                         .version("v1.0")
                         .contact(new Contact()
                                 .name("Ashan Himantha")
