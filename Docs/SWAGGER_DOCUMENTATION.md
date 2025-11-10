@@ -71,13 +71,13 @@ Or run the application from your IDE.
 ### 2. Access Swagger UI
 Open your browser and navigate to:
 ```
-http://localhost:8082/swagger-ui.html
+http://localhost:8080/swagger-ui.html
 ```
 
 ### 3. Access OpenAPI JSON Specification
 The raw OpenAPI specification is available at:
 ```
-http://localhost:8082/api-docs
+http://localhost:8080/api-docs
 ```
 
 ## Using Swagger UI
@@ -187,7 +187,7 @@ public ResponseEntity<?> internalMethod() {
 ## Troubleshooting
 
 ### Swagger UI Not Loading
-1. Verify the application is running on port 8082
+1. Verify the application is running on port 8080
 2. Check `application.properties` for correct Swagger configuration
 3. Clear browser cache and try again
 
@@ -242,5 +242,5 @@ public class SecurityConfig {
 
 ## Summary
 
-Swagger documentation is now fully implemented for the Product Service. Access it at `http://localhost:8082/swagger-ui.html` to explore and test all available endpoints interactively.
+Swagger documentation is now fully implemented for the Product Service. Access it at `http://localhost:8080/swagger-ui.html` to explore and test all available endpoints interactively.
 

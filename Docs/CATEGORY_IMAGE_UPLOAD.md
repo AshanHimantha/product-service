@@ -45,7 +45,7 @@ The service uses `DefaultCredentialsProvider` which checks for credentials in th
 
 **Example using Postman:**
 1. Select `POST` method
-2. URL: `http://localhost:8082/api/v1/categories/1/upload-image`
+2. URL: `http://localhost:8080/api/v1/categories/1/upload-image`
 3. Headers: `Authorization: Bearer {your_token}`
 4. Body → form-data → key: `image`, type: `File`, value: select your image
 5. Send
@@ -78,7 +78,7 @@ The service uses `DefaultCredentialsProvider` which checks for credentials in th
 
 **Example:**
 ```
-DELETE http://localhost:8082/api/v1/categories/1/delete-image
+DELETE http://localhost:8080/api/v1/categories/1/delete-image
 ```
 
 **Response:**

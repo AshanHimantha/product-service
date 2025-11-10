@@ -1,6 +1,6 @@
 # Product Service
 
-[![Java](https://img.shields.io/badge/Java-17-orange.svg?logo=openjdk)](https://openjdk.java.net/) [![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.2.5-6DB33F.svg?logo=spring)](https://spring.io/projects/spring-boot) [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791.svg?logo=postgresql)](https://www.postgresql.org/) [![Maven](https://img.shields.io/badge/Maven-3.8+-C71A36.svg?logo=apache-maven)](https://maven.apache.org/) [![Packaging](https://img.shields.io/badge/Packaging-JAR-blue.svg)](https://maven.apache.org/plugins/maven-jar-plugin/) [![Swagger](https://img.shields.io/badge/API_Docs-Swagger-85EA2D.svg?logo=swagger)](http://localhost:8082/swagger-ui.html)
+[![Java](https://img.shields.io/badge/Java-17-orange.svg?logo=openjdk)](https://openjdk.java.net/) [![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.2.5-6DB33F.svg?logo=spring)](https://spring.io/projects/spring-boot) [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791.svg?logo=postgresql)](https://www.postgresql.org/) [![Maven](https://img.shields.io/badge/Maven-3.8+-C71A36.svg?logo=apache-maven)](https://maven.apache.org/) [![Packaging](https://img.shields.io/badge/Packaging-JAR-blue.svg)](https://maven.apache.org/plugins/maven-jar-plugin/) [![Swagger](https://img.shields.io/badge/API_Docs-Swagger-85EA2D.svg?logo=swagger)](http://localhost:8080/swagger-ui.html)
 
 This repository contains the source code for the Product Service, a core backend microservice for the eCommerce platform.
 
@@ -124,12 +124,12 @@ mvn spring-boot:run
 java -jar target/product-service-0.0.1-SNAPSHOT.jar
 ```
 
-The service will start on **http://localhost:8082**
+The service will start on **http://localhost:8080**
 
 ### Health Check
 Verify the service is running:
 ```bash
-curl http://localhost:8082/actuator/health
+curl http://localhost:8080/actuator/health
 ```
 
 ## 6. API Documentation
@@ -137,7 +137,7 @@ curl http://localhost:8082/actuator/health
 ### Swagger UI (Interactive Documentation)
 Once the application is running, access the interactive Swagger UI at:
 
-**[http://localhost:8082/swagger-ui.html](http://localhost:8082/swagger-ui.html)**
+**[http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)**
 
 The Swagger UI provides:
 - Complete API documentation for all endpoints
@@ -149,7 +149,7 @@ The Swagger UI provides:
 ### OpenAPI Specification
 The raw OpenAPI 3.0 specification is available at:
 
-**[http://localhost:8082/v3/api-docs](http://localhost:8082/v3/api-docs)**
+**[http://localhost:8080/v3/api-docs](http://localhost:8080/v3/api-docs)**
 
 ### API Endpoints Overview
 
