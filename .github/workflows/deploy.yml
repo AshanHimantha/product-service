@@ -71,7 +71,7 @@ jobs:
             # Run the container with environment variables
             sudo docker run -d \
               --name product-service \
-              -p 8082:8082 \
+              -p 8080:8080 \
               -e AWS_REGION=$AWS_REGION \
               -e AWS_SECRETS_DATABASE_SECRET_NAME=$DB_SECRET_NAME \
               $ECR_URL:$IMAGE_TAG
