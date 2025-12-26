@@ -2,8 +2,8 @@ pipeline {
     agent any
 
     environment {
-        AWS_REGION = 'ap-southeast-2'   // change to your region
-        ECR_REPO   = '074955808689.dkr.ecr.ap-southeast-2.amazonaws.com/ecom/product-service'  // replace with your AWS ECR repo URI
+        AWS_REGION = 'ap-southeast-2'
+        ECR_REPO   = '074955808689.dkr.ecr.ap-southeast-2.amazonaws.com/ecom/product-service'
         IMAGE_TAG  = 'latest'
     }
 
@@ -19,9 +19,11 @@ pipeline {
 
         stage('Build Spring Boot') {
             steps {
-                // Use Maven Docker container for cross-platform build
-                docker.image('maven:3.9.2-openjdk-17').inside {
-                    sh 'mvn clean package -DskipTests'
+                script {
+                    // Use Maven Docker container for cross-platform build
+                    docker.image('maven:3.9.2-openjdk-17').inside {
+                        sh 'mvn clean package -DskipTests'
+                    }
                 }
             }
         }
