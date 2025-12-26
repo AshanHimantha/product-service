@@ -34,7 +34,7 @@ public class ProductRequest {
     @Schema(description = "Product variants with sizes and pricing information")
     private List<VariantRequest> variants;
 
-    @Schema(description = "Product status (ACTIVE, INACTIVE)", example = "ACTIVE")
+    @Schema(description = "Product status (ACTIVE, INACTIVE, DRAFT). Defaults to ACTIVE if not specified", example = "ACTIVE")
     private Status status;
 
     public boolean hasVariants() {

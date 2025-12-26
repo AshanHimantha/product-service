@@ -53,7 +53,14 @@ public class SecurityConfig {
                     if (path.startsWith("/swagger-ui") ||
                         path.startsWith("/v3/api-docs") ||
                         path.startsWith("/api-docs") ||
+                        path.startsWith("/swagger-resources") ||
+                        path.startsWith("/webjars/") ||
                         path.equals("/swagger-ui.html")) {
+                        return true;
+                    }
+
+                    // Allow actuator endpoints in the public chain
+                    if (path.startsWith("/actuator")) {
                         return true;
                     }
 
@@ -67,15 +74,15 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
                         // Swagger UI and OpenAPI endpoints
-                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/api-docs/**", "/swagger-ui.html").permitAll()
+                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/api-docs/**", "/swagger-resources/**", "/webjars/**").permitAll()
                         // Public GET endpoints
                         .requestMatchers(HttpMethod.GET, "/api/v1/categories/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/actuator").permitAll()
+                        .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/products/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/category-types/**").permitAll()
                         .anyRequest().denyAll() // This should never be reached due to securityMatcher
                 );
-        // No OAuth2 configuration here - completely bypasses JWT validation
+
 
         return http.build();
     }
@@ -119,11 +126,7 @@ public class SecurityConfig {
         return converter;
     }
 
-    /**
-     * Custom converter to extract the 'cognito:groups' claim from the JWT
-     * and map them to Spring Security authorities with a 'ROLE_' prefix.
-     * This allows us to use hasRole('SuperAdmins') in @PreAuthorize.
-     */
+
     static class CognitoGroupAuthoritiesConverter implements Converter<Jwt, Collection<GrantedAuthority>> {
         @Override
         public Collection<GrantedAuthority> convert(Jwt jwt) {
@@ -134,7 +137,7 @@ public class SecurityConfig {
                         .map(group -> new SimpleGrantedAuthority("ROLE_" + group))
                         .collect(Collectors.toList());
             }
-            return List.of(); // Return empty list if no groups claim
+            return List.of();
         }
     }
 }

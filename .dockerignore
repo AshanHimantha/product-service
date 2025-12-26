@@ -1,20 +1,13 @@
-# Maven
+# Exclude build artifacts and IDE files to reduce Docker build context size
 target/
-pom.xml.tag
-pom.xml.releaseBackup
-pom.xml.versionsBackup
-pom.xml.next
-release.properties
-dependency-reduced-pom.xml
-buildNumber.properties
-.mvn/timing.properties
+!target/*.jar
+
+# Maven wrapper (already in Dockerfile)
 .mvn/wrapper/maven-wrapper.jar
 
-# IDE
+# IDE files
 .idea/
 *.iml
-*.iws
-*.ipr
 .vscode/
 .settings/
 .project
@@ -23,28 +16,33 @@ buildNumber.properties
 *.swo
 *~
 
-# OS
+# OS files
 .DS_Store
 Thumbs.db
 
-# Git
+# Git files
 .git/
 .gitignore
 .gitattributes
 
+# Documentation
+*.md
+Docs/
+README.md
+
+# Docker files
+Dockerfile
+docker-compose.yml
+.dockerignore
+
 # Logs
 *.log
-logs/
 
-# Documentation
-README.md
-Docs/
-*.md
+# Test files
+src/test/
 
-# Test reports
-test-output/
-
-# Environment files (should not be in the image)
-.env
-.env.local
+# CI/CD
+.github/
+.gitlab-ci.yml
+Jenkinsfile
 

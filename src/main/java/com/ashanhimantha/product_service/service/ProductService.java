@@ -1,5 +1,6 @@
 package com.ashanhimantha.product_service.service;
 
+import com.ashanhimantha.product_service.dto.request.ProductPatchRequest;
 import com.ashanhimantha.product_service.dto.request.ProductRequest;
 import com.ashanhimantha.product_service.dto.request.ProductUpdateRequest;
 import com.ashanhimantha.product_service.dto.response.AdminProductResponse;
@@ -8,6 +9,7 @@ import com.ashanhimantha.product_service.dto.response.PublicProductResponse;
 import com.ashanhimantha.product_service.entity.enums.Status;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -16,6 +18,10 @@ public interface ProductService {
 
     AdminProductResponse createProduct(ProductRequest productRequest, List<MultipartFile> files);
     ProductResponse updateProduct(Long productId, ProductUpdateRequest productUpdateRequest, List<MultipartFile> files);
+
+    @Transactional
+    ProductResponse patchProduct(Long productId, ProductPatchRequest productPatchRequest, List<MultipartFile> files);
+
     void deleteProduct(Long productId);
     Page<ProductResponse> getAllActiveProducts(Pageable pageable);
     ProductResponse getActiveProductById(Long productId);

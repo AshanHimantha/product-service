@@ -1,5 +1,6 @@
 package com.ashanhimantha.product_service.service.impl;
 
+import com.ashanhimantha.product_service.dto.request.ProductPatchRequest;
 import com.ashanhimantha.product_service.dto.request.ProductRequest;
 import com.ashanhimantha.product_service.dto.request.ProductUpdateRequest;
 import com.ashanhimantha.product_service.dto.request.VariantRequest;
@@ -63,7 +64,7 @@ public class ProductServiceImpl implements ProductService {
         Product product = productMapper.toProduct(productRequest);
 
         // 3. Set the fields that are not in the DTO
-        product.setStatus(Status.ACTIVE);
+        product.setStatus(productRequest.getStatus() != null ? productRequest.getStatus() : Status.ACTIVE);
         product.setCategory(category);
 
         // 4. Save the product FIRST to get an ID (without variants yet)
@@ -89,7 +90,6 @@ public class ProductServiceImpl implements ProductService {
         return uploadProductImages(savedProduct.getId(), validFiles);
     }
 
-
     private String generateSKU(Product product, ProductVariant variant) {
         String productName = product.getName().replaceAll("\\s+", "").toUpperCase();
         if (productName.length() > 4) {
@@ -107,7 +107,6 @@ public class ProductServiceImpl implements ProductService {
         // Use a timestamp component to reduce collisions
         return String.format("%s-%s-%s-%d", productName, color, size, System.currentTimeMillis() % 10000);
     }
-
 
     @Override
     @Transactional(readOnly = true)
@@ -166,6 +165,47 @@ public class ProductServiceImpl implements ProductService {
         existingProduct.setDescription(productUpdateRequest.getDescription());
         if (productUpdateRequest.getStatus() != null) {
             existingProduct.setStatus(productUpdateRequest.getStatus());
+        }
+
+        Product updatedProduct = productRepository.save(existingProduct);
+
+        // If files provided, upload them
+        if (files != null && !files.isEmpty()) {
+            List<MultipartFile> validFiles = files.stream().filter(f -> f != null && !f.isEmpty()).collect(Collectors.toList());
+            if (!validFiles.isEmpty()) {
+                int currentImageCount = existingProduct.getImageUrls().size();
+                int newImageCount = validFiles.size();
+                if (currentImageCount + newImageCount > MAX_IMAGES) {
+                    throw new IllegalArgumentException(
+                            "Cannot add " + newImageCount + " images. Product already has " +
+                                    currentImageCount + " images. Maximum allowed is " + MAX_IMAGES + " images.");
+                }
+
+                uploadProductImages(productId, validFiles);
+                Product reloaded = productRepository.findById(productId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + productId));
+                return productMapper.toProductResponse(reloaded);
+            }
+        }
+
+        return productMapper.toProductResponse(updatedProduct);
+    }
+
+    @Transactional
+    @Override
+    public ProductResponse patchProduct(Long productId, ProductPatchRequest productPatchRequest, List<MultipartFile> files) {
+        Product existingProduct = productRepository.findById(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + productId));
+
+        // Only update fields that are provided (non-null)
+        if (productPatchRequest.getName() != null) {
+            existingProduct.setName(productPatchRequest.getName());
+        }
+        if (productPatchRequest.getDescription() != null) {
+            existingProduct.setDescription(productPatchRequest.getDescription());
+        }
+        if (productPatchRequest.getStatus() != null) {
+            existingProduct.setStatus(productPatchRequest.getStatus());
         }
 
         Product updatedProduct = productRepository.save(existingProduct);
@@ -289,3 +329,4 @@ public class ProductServiceImpl implements ProductService {
         }
     }
 }
+

@@ -37,19 +37,17 @@ COPY --from=build /app/target/*.jar app.jar
 # Change ownership to non-root user
 RUN chown spring:spring app.jar
 
-# Switch to non-root user
+# Set optimized JVM options for containerized environments with flexible memory
 USER spring:spring
 
-# Expose the application port
-EXPOSE 8080
+# Expose the application port (use 8081 to match docker-compose and SERVER_PORT used in examples)
+EXPOSE 8081
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
-  CMD curl -f http://localhost:8080/actuator/health || exit 1
+  CMD curl -f http://localhost:8081/actuator/health || exit 1
 
 # Set JVM options for containerized environments
-ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:InitialRAMPercentage=50.0"
-
 # Run the application
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
 

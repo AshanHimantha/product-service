@@ -5,8 +5,8 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<!-- Using Spring Boot 3.2.5 for compatibility with SpringDoc OpenAPI 2.5.0 -->
-		<version>3.2.5</version>
+		<!-- Updated to latest Spring Boot 3.3.x for security fixes including CVE-2025-41242 -->
+		<version>3.3.6</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.ashanhimantha</groupId>
@@ -19,7 +19,14 @@
 		<java.version>17</java.version>
 		<mapstruct.version>1.5.5.Final</mapstruct.version>
 		<lombok-mapstruct-binding.version>0.2.0</lombok-mapstruct-binding.version>
-		<aws.version>2.21.29</aws.version>
+		<!-- Updated AWS SDK to latest version with security fixes -->
+		<aws.version>2.29.29</aws.version>
+		<!-- Updated PostgreSQL driver to latest stable version -->
+		<postgresql.version>42.7.7</postgresql.version>
+		<!-- Updated SpringDoc OpenAPI to version compatible with Spring Boot 3.3.x -->
+		<springdoc.version>2.6.0</springdoc.version>
+		<!-- Override vulnerable transitive dependencies -->
+		<commons-lang3.version>3.17.0</commons-lang3.version>
 	</properties>
 	<dependencyManagement>
 		<dependencies>
@@ -29,6 +36,12 @@
 				<version>${aws.version}</version>
 				<type>pom</type>
 				<scope>import</scope>
+			</dependency>
+			<!-- Force upgrade of vulnerable transitive dependencies -->
+			<dependency>
+				<groupId>org.apache.commons</groupId>
+				<artifactId>commons-lang3</artifactId>
+				<version>${commons-lang3.version}</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>
@@ -75,6 +88,7 @@
 		<dependency>
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>
+			<version>${postgresql.version}</version>
 			<scope>runtime</scope>
 		</dependency>
 		<dependency>
@@ -114,7 +128,7 @@
 		<dependency>
 			<groupId>org.springdoc</groupId>
 			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-			<version>2.6.0</version>
+			<version>${springdoc.version}</version>
 		</dependency>
 	</dependencies>
 
@@ -156,6 +170,10 @@
 							<artifactId>lombok</artifactId>
 						</exclude>
 					</excludes>
+					<!-- Enable layered JAR for optimized Docker builds -->
+					<layers>
+						<enabled>true</enabled>
+					</layers>
 				</configuration>
 			</plugin>
 		</plugins>
