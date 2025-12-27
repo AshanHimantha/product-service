@@ -2,31 +2,35 @@ pipeline {
     agent any
 
     environment {
-        AWS_REGION = 'ap-southeast-2'
-        ECR_REPO   = '074955808689.dkr.ecr.ap-southeast-2.amazonaws.com/ecom/product-service'
-        IMAGE_TAG  = 'latest'
+        AWS_REGION   = 'ap-southeast-2'
+        AWS_ACCOUNT  = '074955808689'
+        ECR_REGISTRY = "${AWS_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+        ECR_REPO     = 'ecom/product-service'
+        IMAGE_TAG    = "${env.BUILD_NUMBER}" // Dynamic tag per build
     }
 
     stages {
 
         stage('Checkout') {
             steps {
-                git branch: 'master',
-                    url: 'https://github.com/AshanHimantha/product-service',
-                    credentialsId: 'github'
-            }
-        }
-
-        stage('Build Spring Boot') {
-            steps {
-                // Run Maven inside a container using host Docker
-                sh 'docker run --rm -v $PWD:/app -w /app maven:3.9.2-openjdk-17 mvn clean package -DskipTests'
+                // Reliable Git checkout
+                checkout([$class: 'GitSCM',
+                    branches: [[name: '*/master']],
+                    doGenerateSubmoduleConfigurations: false,
+                    extensions: [],
+                    userRemoteConfigs: [[
+                        url: 'https://github.com/AshanHimantha/product-service',
+                        credentialsId: 'github' // Remove if repo is public
+                    ]]
+                ])
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                sh "docker build -t ${ECR_REPO}:${IMAGE_TAG} ."
+                sh """
+                docker build -t ${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG} .
+                """
             }
         }
 
@@ -38,10 +42,11 @@ pipeline {
                     passwordVariable: 'AWS_SECRET_ACCESS_KEY'
                 )]) {
                     sh """
-                    aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
-                    aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
-                    aws configure set default.region $AWS_REGION
-                    aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REPO
+                    # Login to AWS ECR
+                    aws ecr get-login-password --region ${AWS_REGION} \
+                        --access-key $AWS_ACCESS_KEY_ID \
+                        --secret-key $AWS_SECRET_ACCESS_KEY \
+                        | docker login --username AWS --password-stdin ${ECR_REGISTRY}
                     """
                 }
             }
@@ -49,17 +54,20 @@ pipeline {
 
         stage('Push Docker Image') {
             steps {
-                sh "docker push ${ECR_REPO}:${IMAGE_TAG}"
+                sh "docker push ${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG}"
             }
         }
     }
 
     post {
         success {
-            echo '✅ Docker image built and pushed to ECR successfully'
+            echo "✅ Docker image built and pushed: ${ECR_REGISTRY}/${ECR_REPO}:${IMAGE_TAG}"
         }
         failure {
             echo '❌ Pipeline failed'
+        }
+        always {
+            cleanWs() // Clean workspace to avoid old repo conflicts
         }
     }
 }
