@@ -19,12 +19,8 @@ pipeline {
 
         stage('Build Spring Boot') {
             steps {
-                script {
-                    // Use Maven Docker container for cross-platform build
-                    docker.image('maven:3.9.2-openjdk-17').inside {
-                        sh 'mvn clean package -DskipTests'
-                    }
-                }
+                // Run Maven inside a container using host Docker
+                sh 'docker run --rm -v $PWD:/app -w /app maven:3.9.2-openjdk-17 mvn clean package -DskipTests'
             }
         }
 
